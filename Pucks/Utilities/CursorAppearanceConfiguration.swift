@@ -1,5 +1,9 @@
 import SwiftUI
 
+extension Notification.Name {
+    static let menuBarIconChanged = Notification.Name("menuBarIconChanged")
+}
+
 enum CursorStyle: String, CaseIterable, Identifiable {
     case triangle
     case arrow
@@ -36,6 +40,25 @@ final class CursorAppearanceConfiguration: ObservableObject {
             UserDefaults.standard.set(scale, forKey: Self.scaleUserDefaultsKey)
         }
     }
+    /// SF Symbol name for the menu bar icon.
+    @Published var menuBarIcon: String {
+        didSet {
+            UserDefaults.standard.set(menuBarIcon, forKey: Self.menuBarIconUserDefaultsKey)
+            NotificationCenter.default.post(name: .menuBarIconChanged, object: menuBarIcon)
+        }
+    }
+
+    static let menuBarIconOptions: [(symbol: String, label: String)] = [
+        ("bubble.left.fill", "Bubble"),
+        ("waveform", "Waveform"),
+        ("mic.fill", "Mic"),
+        ("sparkles", "Sparkles"),
+        ("brain.head.profile", "Brain"),
+        ("eye.fill", "Eye"),
+        ("circle.fill", "Dot"),
+        ("triangle.fill", "Triangle"),
+    ]
+
     /// Distance of the Pucks cursor from the real cursor (10–80pt, default 35).
     @Published var distance: Double {
         didSet {
@@ -46,6 +69,7 @@ final class CursorAppearanceConfiguration: ObservableObject {
     private static let userDefaultsKey = "cursorStyle"
     private static let scaleUserDefaultsKey = "cursorScale"
     private static let distanceUserDefaultsKey = "cursorDistance"
+    private static let menuBarIconUserDefaultsKey = "menuBarIcon"
 
     private init() {
         if let rawValue = UserDefaults.standard.string(forKey: Self.userDefaultsKey),
@@ -60,5 +84,7 @@ final class CursorAppearanceConfiguration: ObservableObject {
 
         let storedDistance = UserDefaults.standard.double(forKey: Self.distanceUserDefaultsKey)
         self.distance = storedDistance == 0 ? 35.0 : min(max(storedDistance, 10), 80)
+
+        self.menuBarIcon = UserDefaults.standard.string(forKey: Self.menuBarIconUserDefaultsKey) ?? "bubble.left.fill"
     }
 }

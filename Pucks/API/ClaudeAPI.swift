@@ -5,13 +5,7 @@ import os
 class ClaudeAPI {
     static let shared = ClaudeAPI()
 
-    /// Uses direct Anthropic API if ANTHROPIC_API_KEY is set, otherwise falls back to proxy.
-    private var endpoint: String {
-        if APIKeyConfig.anthropicKey != nil {
-            return "https://api.anthropic.com/v1/messages"
-        }
-        return "https://clicky-proxy.farza-0cb.workers.dev/chat"
-    }
+    private let endpoint = "https://api.anthropic.com/v1/messages"
 
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.pucks", category: "ClaudeAPI")
 
@@ -71,12 +65,12 @@ format: [POINT:x,y:label] where x,y are integer pixel coordinates in the screens
                     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
                     request.timeoutInterval = 60
 
-                    // If calling Anthropic directly, add auth headers
-                    if let apiKey = APIKeyConfig.anthropicKey {
-                        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-                        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-                        request.setValue("computer-use-2025-11-24", forHTTPHeaderField: "anthropic-beta")
+                    guard let apiKey = APIKeyConfig.anthropicKey else {
+                        throw NSError(domain: "ClaudeAPI", code: -1,
+                                      userInfo: [NSLocalizedDescriptionKey: "Anthropic API key not configured."])
                     }
+                    request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+                    request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
 
                     // Build the messages array for the API
                     var apiMessages: [[String: Any]] = []
@@ -122,22 +116,12 @@ format: [POINT:x,y:label] where x,y are integer pixel coordinates in the screens
                         }
                     }
 
-                    // Include Computer Use tool for pixel-precise element detection
-                    let resolution = self.bestComputerUseResolution()
-                    let computerTool: [String: Any] = [
-                        "type": "computer_20251124",
-                        "name": "computer",
-                        "display_width_px": resolution.width,
-                        "display_height_px": resolution.height
-                    ]
-
                     let body: [String: Any] = [
                         "model": "claude-sonnet-4-6",
                         "max_tokens": 4096,
                         "stream": true,
                         "system": self.systemPrompt,
-                        "messages": apiMessages,
-                        "tools": [computerTool]
+                        "messages": apiMessages
                     ]
 
                     request.httpBody = try JSONSerialization.data(withJSONObject: body)

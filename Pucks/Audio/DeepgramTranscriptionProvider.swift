@@ -17,10 +17,7 @@ struct DeepgramTranscriptionProvider: BuddyTranscriptionProvider {
     var requiresSpeechRecognitionPermission: Bool { false }
 
     private var apiKey: String? {
-        if let key = ProcessInfo.processInfo.environment["DEEPGRAM_API_KEY"], !key.isEmpty {
-            return key
-        }
-        return APIKeysManager.shared.deepgramKey
+        APIKeyConfig.deepgramKey
     }
 
     func createSession() throws -> BuddyStreamingTranscriptionSession {
@@ -58,12 +55,12 @@ private final class DeepgramTranscriptionSession: BuddyStreamingTranscriptionSes
         pcmConverter.reset()
         transcriptText = ""
 
-        var request = URLRequest(url: URL(string: "wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&punctuate=true&encoding=linear16&sample_rate=16000&channels=1&vad_events=true&vad_turnoff=500")!)
-        request.setValue(apiKey, forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 30
+        // Deepgram accepts auth via the Sec-WebSocket-Protocol header.
+        // URLSessionWebSocketTask sends the `protocols` array as that header.
+        let url = URL(string: "wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&punctuate=true&encoding=linear16&sample_rate=16000&channels=1&vad_events=true&vad_turnoff=500")!
 
         let session = URLSession(configuration: .default)
-        webSocketTask = session.webSocketTask(with: request)
+        webSocketTask = session.webSocketTask(with: url, protocols: ["token", apiKey])
         webSocketTask?.resume()
 
         isConnected = true

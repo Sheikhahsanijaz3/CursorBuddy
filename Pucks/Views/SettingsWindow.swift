@@ -20,7 +20,6 @@ final class SettingsWindowController: NSObject, @unchecked Sendable {
         win.title = "Pucks Settings"
         win.center()
         win.isReleasedWhenClosed = false
-        win.level = .popUpMenu
         win.appearance = NSAppearance(named: .darkAqua)
         self.settingsWindow = win
         super.init()
@@ -39,19 +38,27 @@ final class SettingsWindowController: NSObject, @unchecked Sendable {
 
     /// Drop window level to normal so system dialogs appear above, then restore after 2s.
     func temporarilyLowerLevel() {
-        settingsWindow.level = .normal
+        // Window is already at normal level, just ensure it doesn't block system dialogs
+        settingsWindow.orderBack(nil)
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-            self?.settingsWindow.level = .popUpMenu
+            self?.settingsWindow.orderFront(nil)
         }
     }
 
     func show(tab: SettingsTab? = nil) {
         if let tab {
             Self.pendingTab = tab
-            NotificationCenter.default.post(name: .settingsTabChanged, object: tab)
         }
-        settingsWindow.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        settingsWindow.level = .popUpMenu + 1
+        settingsWindow.makeKeyAndOrderFront(nil)
+        settingsWindow.makeFirstResponder(settingsWindow.contentView)
+        // Post after window is visible so the SwiftUI view is mounted and listening
+        if let tab {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                NotificationCenter.default.post(name: .settingsTabChanged, object: tab)
+            }
+        }
     }
 }
 
@@ -137,9 +144,16 @@ struct SettingsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .preferredColorScheme(.dark)
+        .onAppear {
+            if let pending = SettingsWindowController.pendingTab {
+                selectedTab = pending
+                SettingsWindowController.pendingTab = nil
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .settingsTabChanged)) { notification in
             if let tab = notification.object as? SettingsTab {
                 selectedTab = tab
+                SettingsWindowController.pendingTab = nil
             }
         }
     }
@@ -683,6 +697,41 @@ struct AppearanceSettingsView: View {
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundColor(.blue)
                         .frame(width: 36)
+                }
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Menu Bar Icon")
+                    .font(.system(size: 13, weight: .medium))
+
+                HStack(spacing: 4) {
+                    ForEach(CursorAppearanceConfiguration.menuBarIconOptions, id: \.symbol) { option in
+                        Button {
+                            cursorConfig.menuBarIcon = option.symbol
+                        } label: {
+                            VStack(spacing: 4) {
+                                Image(systemName: option.symbol)
+                                    .font(.system(size: 16))
+                                    .frame(width: 28, height: 28)
+                                Text(option.label)
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundColor(cursorConfig.menuBarIcon == option.symbol ? .white : .white.opacity(0.45))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .background {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(cursorConfig.menuBarIcon == option.symbol ? Color.blue.opacity(0.3) : .white.opacity(0.06))
+                            }
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(cursorConfig.menuBarIcon == option.symbol ? Color.blue.opacity(0.5) : .clear, lineWidth: 1)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
 

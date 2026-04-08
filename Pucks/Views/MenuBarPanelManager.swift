@@ -47,8 +47,7 @@ class MenuBarPanelManager: ObservableObject {
     private var positionObservers: [NSObjectProtocol] = []
 
     let panelWidth: CGFloat = 380
-    let panelHeight: CGFloat = 160
-    let panelExpandedHeight: CGFloat = 480
+    let panelHeight: CGFloat = 480
 
     // Environment objects to inject into the panel view
     var companionManager: CompanionManager?
@@ -84,6 +83,7 @@ class MenuBarPanelManager: ObservableObject {
 
         setupDismissObserver()
         setupPinStateObserver()
+        observeMenuBarIconChanges()
 
         // If pinned, restore panel automatically on launch
         if pinState.isPinned {
@@ -398,25 +398,31 @@ class MenuBarPanelManager: ObservableObject {
 
     // MARK: - Menu Bar Icon
 
+    private var menuBarIconObserver: NSObjectProtocol?
+
+    private func observeMenuBarIconChanges() {
+        menuBarIconObserver = NotificationCenter.default.addObserver(
+            forName: .menuBarIconChanged, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.statusItem?.button?.image = Self.makeMenuBarIcon()
+            }
+        }
+    }
+
     private static func makeMenuBarIcon() -> NSImage {
+        let symbolName = CursorAppearanceConfiguration.shared.menuBarIcon
+        if let sfImage = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Pucks") {
+            let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
+            let configured = sfImage.withSymbolConfiguration(config) ?? sfImage
+            configured.isTemplate = true
+            return configured
+        }
+        // Fallback to a simple circle
         let size = NSSize(width: 18, height: 18)
         let image = NSImage(size: size, flipped: false) { rect in
-            let w = rect.width
-            let h = rect.height
-
-            let arrow = NSBezierPath()
-            arrow.move(to: NSPoint(x: w * 0.15, y: h * 0.95))
-            arrow.line(to: NSPoint(x: w * 0.15, y: h * 0.13))
-            arrow.line(to: NSPoint(x: w * 0.38, y: h * 0.32))
-            arrow.line(to: NSPoint(x: w * 0.60, y: h * 0.0))
-            arrow.line(to: NSPoint(x: w * 0.72, y: h * 0.12))
-            arrow.line(to: NSPoint(x: w * 0.52, y: h * 0.40))
-            arrow.line(to: NSPoint(x: w * 0.72, y: h * 0.60))
-            arrow.close()
-
             NSColor.black.setFill()
-            arrow.fill()
-
+            NSBezierPath(ovalIn: rect.insetBy(dx: 3, dy: 3)).fill()
             return true
         }
         image.isTemplate = true

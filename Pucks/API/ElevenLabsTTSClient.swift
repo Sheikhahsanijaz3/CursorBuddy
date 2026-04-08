@@ -35,16 +35,10 @@ class TTSClient {
     }
 }
 
-/// ElevenLabs TTS client.
+/// ElevenLabs TTS client — direct API only.
 class ElevenLabsTTSClient {
     static let shared = ElevenLabsTTSClient()
 
-    /// Uses direct ElevenLabs API if key is set, otherwise falls back to proxy.
-    private var useDirectAPI: Bool {
-        APIKeyConfig.elevenLabsKey != nil
-    }
-
-    private let proxyURL = "https://clicky-proxy.farza-0cb.workers.dev/tts"
     private let directBaseURL = "https://api.elevenlabs.io/v1/text-to-speech"
     private let defaultVoiceId = "21m00Tcm4TlvDq8ikWAM" // Rachel
     private let modelId = "eleven_flash_v2_5"
@@ -60,13 +54,12 @@ class ElevenLabsTTSClient {
             return Data()
         }
 
-        let audioData: Data
-
-        if useDirectAPI, let apiKey = APIKeyConfig.elevenLabsKey {
-            audioData = try await callDirectAPI(text: text, apiKey: apiKey)
-        } else {
-            audioData = try await callProxy(text: text)
+        guard let apiKey = APIKeyConfig.elevenLabsKey else {
+            throw NSError(domain: "ElevenLabsTTS", code: -1,
+                          userInfo: [NSLocalizedDescriptionKey: "ElevenLabs API key not configured."])
         }
+
+        let audioData = try await callDirectAPI(text: text, apiKey: apiKey)
 
         // Play the audio
         try await MainActor.run {
@@ -135,30 +128,4 @@ class ElevenLabsTTSClient {
         return data
     }
 
-    // MARK: - Proxy
-
-    private func callProxy(text: String) async throws -> Data {
-        var request = URLRequest(url: URL(string: proxyURL)!)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 30
-
-        let body: [String: Any] = [
-            "text": text,
-            "model_id": modelId
-        ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
-            logger.error("ElevenLabs TTS proxy error: HTTP \(statusCode) \(errorText)")
-            throw NSError(domain: "ElevenLabsTTS", code: statusCode,
-                          userInfo: [NSLocalizedDescriptionKey: "TTS proxy failed: \(errorText)"])
-        }
-
-        return data
-    }
 }

@@ -39,10 +39,49 @@ struct AssemblyAIStreamingTranscriptionProvider: BuddyTranscriptionProvider {
     }
 
     func createSession() throws -> BuddyStreamingTranscriptionSession {
-        guard let token = token, !token.isEmpty else {
+        guard let apiKey = token, !apiKey.isEmpty else {
             throw AssemblyAIStreamingTranscriptionProviderError.notConfigured
         }
-        return AssemblyAIStreamingTranscriptionSession(token: token)
+        // Fetch token synchronously on a background thread to avoid main-thread deadlock
+        var tempToken: String?
+        var fetchError: Error?
+        let group = DispatchGroup()
+        group.enter()
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let url = URL(string: "https://streaming.assemblyai.com/v3/token?expires_in_seconds=480")!
+                var request = URLRequest(url: url)
+                request.httpMethod = "GET"
+                request.setValue(apiKey, forHTTPHeaderField: "Authorization")
+
+                let sem = DispatchSemaphore(value: 0)
+                URLSession.shared.dataTask(with: request) { data, response, error in
+                    defer { sem.signal() }
+                    if let error { fetchError = error; return }
+                    guard let data,
+                          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                          let token = json["token"] as? String else {
+                        let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+                        let body = data.flatMap { String(data: $0, encoding: .utf8) } ?? "unknown"
+                        fetchError = AssemblyAIStreamingTranscriptionProviderError.connectionFailed(
+                            "Token fetch failed (HTTP \(code)): \(body)"
+                        )
+                        return
+                    }
+                    tempToken = token
+                }.resume()
+                sem.wait()
+            }
+            group.leave()
+        }
+        group.wait()
+
+        if let fetchError { throw fetchError }
+        guard let tempToken else {
+            throw AssemblyAIStreamingTranscriptionProviderError.connectionFailed("No token received")
+        }
+
+        return AssemblyAIStreamingTranscriptionSession(apiKey: apiKey, tempToken: tempToken)
     }
 }
 
@@ -55,7 +94,7 @@ private final class AssemblyAIStreamingTranscriptionSession: BuddyStreamingTrans
         category: "AssemblyAISession"
     )
 
-    private let token: String
+    private let apiKey: String
     private var webSocketTask: URLSessionWebSocketTask?
     private let sendQueue = DispatchQueue(label: "com.learningbuddy.assemblyai.send")
     private let stateQueue = DispatchQueue(label: "com.learningbuddy.assemblyai.state")
@@ -71,8 +110,11 @@ private final class AssemblyAIStreamingTranscriptionSession: BuddyStreamingTrans
 
     // MARK: Init
 
-    init(token: String) {
-        self.token = token
+    private let tempToken: String
+
+    init(apiKey: String, tempToken: String) {
+        self.apiKey = apiKey
+        self.tempToken = tempToken
     }
 
     // MARK: Protocol methods
@@ -84,16 +126,17 @@ private final class AssemblyAIStreamingTranscriptionSession: BuddyStreamingTrans
         }
         urlComponents.queryItems = [
             URLQueryItem(name: "sample_rate", value: "16000"),
-            URLQueryItem(name: "encoding", value: "pcm_s16le")
+            URLQueryItem(name: "encoding", value: "pcm_s16le"),
+            URLQueryItem(name: "speech_model", value: "universal-3-pro"),
+            URLQueryItem(name: "token", value: tempToken)
         ]
 
         guard let url = urlComponents.url else {
             throw AssemblyAIStreamingTranscriptionProviderError.connectionFailed("Invalid URL")
         }
 
-        var request = URLRequest(url: url)
-        request.setValue(token, forHTTPHeaderField: "Authorization")
-
+        let request = URLRequest(url: url)
+        // Create a fresh URLSession per connection to avoid stale connection pool issues
         let session = URLSession(configuration: .default)
         webSocketTask = session.webSocketTask(with: request)
         webSocketTask?.resume()

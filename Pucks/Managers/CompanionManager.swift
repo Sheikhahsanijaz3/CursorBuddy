@@ -13,6 +13,17 @@ enum CompanionVoiceState: String, Equatable {
 
 // MARK: - Conversation Turn
 
+extension Date {
+    var relativeString: String {
+        let seconds = -self.timeIntervalSinceNow
+        if seconds < 5 { return "now" }
+        if seconds < 60 { return "\(Int(seconds))s ago" }
+        if seconds < 3600 { return "\(Int(seconds / 60))m ago" }
+        if seconds < 86400 { return "\(Int(seconds / 3600))h ago" }
+        return "\(Int(seconds / 86400))d ago"
+    }
+}
+
 struct ConversationTurn: Identifiable, Codable {
     let id: UUID
     let userTranscript: String

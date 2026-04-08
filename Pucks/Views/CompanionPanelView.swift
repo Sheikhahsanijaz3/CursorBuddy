@@ -98,17 +98,9 @@ struct CompanionPanelView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             checkAllPermissions()
         }
-        .onChange(of: companionManager.voiceState) { _, newState in
-            switch newState {
-            case .listening, .thinking, .speaking:
-                requestPanelResize(height: 480)
-            case .idle:
-                // Shrink back after a delay so user can read the response
-                DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                    if companionManager.voiceState == .idle {
-                        requestPanelResize(height: 160)
-                    }
-                }
+        .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
+            if !allPermissionsGranted {
+                checkAllPermissions()
             }
         }
         .onDisappear {
@@ -287,6 +279,16 @@ struct CompanionPanelView: View {
                 .padding(.horizontal, 12)
                 .padding(.top, 4)
                 .frame(maxHeight: .infinity)
+                .mask(
+                    VStack(spacing: 0) {
+                        LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                            .frame(height: 20)
+                        Color.black
+                        LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                            .frame(height: 20)
+                    }
+                )
+                .clipped()
 
             // Thinking indicator
             if companionManager.voiceState == .thinking {
@@ -304,6 +306,13 @@ struct CompanionPanelView: View {
 
             // ── Bottom pinned area ──
 
+            // Screenshot intercept
+            if companionManager.screenshotInterceptor.pendingScreenshot != nil {
+                screenshotInterceptCard
+                    .padding(.horizontal, 12)
+                    .padding(.top, 4)
+            }
+
             // Attached screenshots
             if !companionManager.attachedScreenshots.isEmpty {
                 attachedScreenshotsRow
@@ -311,18 +320,11 @@ struct CompanionPanelView: View {
                     .padding(.top, 4)
             }
 
-            // Microphone controls
+            // Microphone — centered
             microphoneSection
                 .padding(.horizontal, 12)
                 .padding(.top, 6)
                 .padding(.bottom, 10)
-
-            // Screenshot intercept — subtle bottom strip
-            if companionManager.screenshotInterceptor.pendingScreenshot != nil {
-                screenshotInterceptCard
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 6)
-            }
         }
     }
 
@@ -515,12 +517,12 @@ struct CompanionPanelView: View {
                                 // User message — right aligned
                                 HStack {
                                     Spacer(minLength: 48)
-                                    messageBubble(turn.userTranscript, isUser: true)
+                                    messageBubble(turn.userTranscript, isUser: true, turn: turn)
                                 }
 
                                 // Assistant response — left aligned
                                 HStack {
-                                    messageBubble(turn.assistantResponse, isUser: false)
+                                    messageBubble(turn.assistantResponse, isUser: false, turn: turn)
                                     Spacer(minLength: 48)
                                 }
                             }
@@ -538,7 +540,6 @@ struct CompanionPanelView: View {
                 }
             }
         }
-        .frame(maxHeight: .infinity)
     }
 
     private var emptyConversationPlaceholder: some View {
@@ -556,26 +557,46 @@ struct CompanionPanelView: View {
         .padding(.top, 40)
     }
 
-    private func messageBubble(_ text: String, isUser: Bool) -> some View {
-        VStack(alignment: isUser ? .trailing : .leading, spacing: 2) {
-            Text(isUser ? "You" : "Pucks")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.white.opacity(0.5))
-
+    private func messageBubble(_ text: String, isUser: Bool, turn: ConversationTurn) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
             Text(text)
                 .font(.system(size: 13))
                 .foregroundColor(.white.opacity(0.7))
                 .multilineTextAlignment(.leading)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: messageMaxWidth, alignment: .leading)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .glassEffect(
-                    .regular.tint(isUser ? accentColor.opacity(0.14) : .white.opacity(0.05)),
-                    in: .rect(cornerRadius: 12)
-                )
+
+            // Footer: time + model + copy
+            HStack(spacing: 4) {
+                Text(turn.timestamp.relativeString)
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.2))
+                if !isUser {
+                    Text("· \(turn.modelName)")
+                        .font(.system(size: 9))
+                        .foregroundColor(.white.opacity(0.2))
+                }
+                Spacer()
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(text, forType: .string)
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 9))
+                        .foregroundColor(.white.opacity(0.2))
+                }
+                .buttonStyle(.plain)
+                .help("Copy")
+            }
+            .padding(.top, 6)
         }
+        .frame(maxWidth: messageMaxWidth, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .glassEffect(
+            .regular.tint(isUser ? accentColor.opacity(0.14) : .white.opacity(0.05)),
+            in: .rect(cornerRadius: 12)
+        )
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -652,29 +673,28 @@ struct CompanionPanelView: View {
 
     private var attachedScreenshotsRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 ForEach(companionManager.attachedScreenshots) { screenshot in
                     ZStack(alignment: .topTrailing) {
                         Image(nsImage: screenshot.thumbnail)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: 52, height: 40)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .frame(width: 32, height: 24)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(.white.opacity(0.2), lineWidth: 1)
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(.white.opacity(0.2), lineWidth: 0.5)
                             )
 
                         Button {
                             companionManager.removeAttachedScreenshot(screenshot.id)
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 14))
-                                .foregroundColor(.white.opacity(0.7))
-                                .background(Circle().fill(.black.opacity(0.5)))
+                                .font(.system(size: 10))
+                                .foregroundColor(.white.opacity(0.6))
                         }
                         .buttonStyle(.plain)
-                        .offset(x: 4, y: -4)
+                        .offset(x: 3, y: -3)
                     }
                 }
 
