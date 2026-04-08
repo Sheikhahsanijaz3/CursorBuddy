@@ -1,73 +1,101 @@
 # CursorBuddy
 
-CursorBuddy is a native macOS menu bar AI companion that lives in your system tray and helps you learn, think, and create through voice conversation.
+> ⚠️ **Work in Progress** — CursorBuddy is under active development. Expect rough edges, breaking changes, and missing features. Contributions and feedback welcome.
+
+CursorBuddy (formerly Pucks) is a native macOS menu bar AI companion that lives in your system tray and helps you learn, think, and create through voice conversation. It can see your screen, hear you talk, point at things, and now execute tools on your behalf.
 
 ## What It Does
 
-CursorBuddy is a push-to-talk AI assistant that:
+- **Push-to-talk AI assistant** — hold a hotkey, speak, get a response read back to you
+- **Screen-aware** — captures your screen and cursor position so it understands what you're looking at
+- **Cursor buddy** — an animated blue cursor that flies to and points at UI elements Claude references
+- **Liquid Glass lens** — magnification lens that follows your cursor (macOS 26)
+- **Built-in tools** — execute shell commands, read/write files, open apps/URLs, search files, clipboard access
+- **MCP server support** — connect to external MCP servers (stdio + HTTP/SSE) to extend CursorBuddy with any tools
+- **Multi-provider** — supports multiple transcription (OpenAI, Deepgram, AssemblyAI, Apple Speech) and TTS (ElevenLabs, Cartesia) providers
 
-- Lives in the macOS menu bar (LSUIElement app — no dock icon)
-- Captures your screen for visual context when you talk to it
-- Transcribes your speech via multiple providers (OpenAI, Deepgram, AssemblyAI, Apple Speech)
-- Sends your transcript + screenshot to Claude AI for intelligent responses
-- Speaks responses back to you using ElevenLabs or Cartesia text-to-speech
-- Supports global hotkeys for push-to-talk activation
-- Features a cursor overlay that flies to and points at UI elements on screen
+## Recent Changes (Unpushed)
+
+### Rename: Pucks → CursorBuddy
+- Full rename across all 35+ Swift files, bundle ID (`com.cursorbuddy.app`), Info.plist, entitlements, build scripts, system prompt, config paths (`~/.cursorbuddy/`)
+- Sparkle feed URL, help URL, menu items, log prefixes all updated
+
+### MCP Integration
+- **MCP Swift SDK** (`modelcontextprotocol/swift-sdk`) integrated as a dependency
+- **MCP Client Manager** — connects to external MCP servers, discovers tools, routes tool calls
+- **Stdio transport** — spawn local processes (e.g. `npx @modelcontextprotocol/server-filesystem /tmp`)
+- **HTTP/SSE transport** — connect to remote MCP servers
+- **Settings UI** — new "MCP Servers" tab to add/remove/configure servers with status indicators and tool discovery
+
+### Built-in Tools (Native, No MCP Required)
+- `execute_command` — run shell commands via `/bin/zsh`
+- `read_file` / `write_file` — read and write files on disk
+- `list_directory` — list folder contents with types and sizes
+- `search_files` — find files by glob pattern
+- `open_url` / `open_application` — open URLs and launch apps
+- `get_clipboard` / `set_clipboard` — clipboard read/write
+- All tools are passed to Claude in every API request and executed when Claude calls them via the tool_use protocol
+
+### Claude API Improvements
+- Full tool_use loop: Claude requests tool → CursorBuddy executes → result sent back → Claude continues
+- Handles streaming `content_block_start`, `input_json_delta`, `content_block_stop`, and `stop_reason: "tool_use"`
+- Dead `computerUseResolutions` code removed
+
+### Screen Capture Overhaul (Matching Clicky)
+- Screenshots now capped at **1280px max dimension** (was native resolution — 4-5x smaller, much faster)
+- Proper `screenshotWidthInPixels` vs `displayWidthInPoints` separation for accurate coordinate conversion
+- Image labels include exact pixel dimensions so Claude knows the coordinate space
+- Own app windows excluded from captures
+- JPEG quality bumped to 0.8
+
+### UI/UX Improvements
+- Panel corner radius reduced to 16px
+- Settings window: resizable, proper keyboard focus (`NSApp.setActivationPolicy(.regular)` for LSUIElement apps)
+- Settings sidebar widened to 180px for "MCP Servers" tab
+- Glass effects on cursor style picker, menu bar icon picker, and slider controls
+- Mic button and status chip use blue-tinted glass with colored glow
+- Streaming response overlay uses frosted material instead of opaque background
+- Chat panel hides when Settings opens, restores on close
+- API keys save in realtime (removed manual Save button)
+- Chat layout restructured — fixed header, scrollable messages, fixed footer chin with mic
+
+### CI/CD
+- Xcode Cloud scripts (`ci_scripts/ci_post_clone.sh`, `ci_post_xcodebuild.sh`)
+- GitHub Actions workflows: `build.yml` (push to main) and `release.yml` (tag-based release with signing + notarization)
+- Shared Xcode scheme for CursorBuddy
 
 ## Architecture
 
 ```
 CursorBuddy/
-├── CursorBuddyApp.swift       # SwiftUI App entry point, menu bar setup
-├── CompanionAppDelegate.swift  # NSApplicationDelegate, manager orchestration
-├── Info.plist                  # App configuration, permissions, Sparkle config
-├── CursorBuddy.entitlements   # Sandbox disabled (CGEvent tap, screen capture)
-├── Views/                      # SwiftUI views (settings, popover, overlays)
-│   ├── CompanionPanelView      # Main chat panel UI
-│   ├── MenuBarPanelManager     # NSStatusItem + NSPanel management
-│   ├── SettingsWindow          # Full settings with sidebar navigation
-│   └── LensSettingsView        # Liquid Glass lens configuration
-├── Managers/                   # Core business logic
-│   ├── CompanionManager        # Orchestrates talk → transcribe → AI → TTS flow
-│   └── FloatingSessionButton   # Floating mic button
-├── API/                        # API clients
-│   ├── ClaudeAPI               # Anthropic Claude (vision + text, streaming)
-│   ├── CodexAPI                # OpenAI chat completions
-│   ├── OpenAIAPI               # Whisper transcription
-│   ├── ElevenLabsTTSClient     # ElevenLabs text-to-speech
-│   └── CartesiaTTSClient       # Cartesia real-time TTS
-├── Audio/                      # Audio recording + transcription
-│   ├── BuddyDictationManager   # AVAudioEngine recording
-│   ├── TranscriptionProtocol   # Provider protocol
-│   ├── VoiceActivityDetector   # VAD for auto-stop
-│   └── Provider implementations (OpenAI, Deepgram, AssemblyAI, Apple Speech)
-├── Overlay/                    # Screen overlay views
-│   ├── CursorOverlayView       # Animated cursor buddy
-│   ├── OverlayWindow           # Per-screen transparent windows
-│   ├── LensOverlay             # Liquid Glass magnification lens
-│   ├── CompanionResponseOverlay # Streaming response bubble
-│   └── GlobalPushToTalkOverlay  # PTT visual indicator
-├── Utilities/                  # Helpers + system integration
-│   ├── APIKeyConfig            # Multi-source key resolution
-│   ├── APIKeysManager          # Key persistence
-│   ├── CompanionPermissionCenter # macOS permission management
-│   ├── ElementLocationDetector  # [POINT:] tag parsing + cursor flight
-│   ├── ScreenshotManager       # ScreenCaptureKit integration
-│   ├── SelectedTextMonitor      # AX API selected text tracking
-│   └── CGEventShortcutMonitor   # Global hotkey via CGEvent tap
-└── Resources/                  # Assets (AppIcon.icns)
+├── CursorBuddyApp.swift        # SwiftUI App entry point
+├── CompanionAppDelegate.swift   # NSApplicationDelegate, manager orchestration
+├── Info.plist                   # App config, permissions, Sparkle
+├── CursorBuddy.entitlements     # Sandbox disabled for CGEvent tap + screen capture
+├── MCP/                         # Model Context Protocol integration
+│   ├── MCPClientManager         # Connects to MCP servers, aggregates tools
+│   ├── MCPServerConfig          # Server config model + persistence
+│   ├── MCPSettingsView          # Settings UI for MCP servers
+│   └── BuiltInTools             # Native tools (shell, files, clipboard, etc.)
+├── API/                         # API clients
+│   ├── ClaudeAPI                # Anthropic Claude (streaming, tool_use loop)
+│   ├── CodexAPI                 # OpenAI chat completions
+│   ├── OpenAIAPI                # Whisper transcription
+│   ├── ElevenLabsTTSClient      # ElevenLabs TTS
+│   └── CartesiaTTSClient        # Cartesia real-time TTS
+├── Audio/                       # Recording + transcription providers
+├── Views/                       # SwiftUI views
+├── Managers/                    # CompanionManager, FloatingSessionButton
+├── Overlay/                     # Cursor overlay, response bubble, lens, PTT indicator
+├── Utilities/                   # Permissions, hotkeys, screen capture, config
+└── Resources/                   # AppIcon.icns
 ```
-
-**Key technology choices:**
-- **SwiftUI + AppKit** hybrid — SwiftUI for views, AppKit for menu bar, overlays, and system APIs
-- **No sandbox** — required for CGEvent tap (global hotkeys) and screen capture
-- **Universal binary** — runs natively on both Apple Silicon and Intel Macs
-- **macOS 26+** — uses Liquid Glass effects
 
 **Dependencies:**
 - [Sparkle](https://github.com/sparkle-project/Sparkle) — auto-updates
 - [PostHog](https://github.com/PostHog/posthog-ios) — analytics
 - [PLCrashReporter](https://github.com/microsoft/plcrashreporter) — crash reporting
+- [MCP Swift SDK](https://github.com/modelcontextprotocol/swift-sdk) — Model Context Protocol client
 
 ## Building
 
@@ -75,12 +103,7 @@ CursorBuddy/
 - Xcode 26+ with macOS 26 SDK
 - Swift 6.2+
 
-### Build with Xcode
-1. Open `Package.swift` in Xcode (File → Open → select Package.swift)
-2. Select the "CursorBuddy" scheme and "My Mac" as the run destination
-3. Build and run (⌘R)
-
-### Build from command line
+### Quick Start
 ```bash
 swift build
 swift run CursorBuddy
@@ -91,13 +114,8 @@ swift run CursorBuddy
 ./build-and-run.sh  # Builds, signs, installs to /Applications, launches
 ```
 
-### Release Build
-```bash
-./release-build.sh  # Archives, signs with Developer ID, creates DMG + ZIP
-```
-
 ### API Keys
-Configure in the app's Settings → API Keys, or create `~/.cursorbuddy/keys.json`:
+Configure in Settings → API Keys, or create `~/.cursorbuddy/keys.json`:
 ```json
 {
     "ANTHROPIC_API_KEY": "sk-ant-...",
@@ -107,23 +125,17 @@ Configure in the app's Settings → API Keys, or create `~/.cursorbuddy/keys.jso
 }
 ```
 
-Or set environment variables: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `ELEVENLABS_API_KEY`, etc.
+### MCP Servers
+Configure in Settings → MCP Servers. Example stdio server:
+- Command: `npx`
+- Arguments: `@modelcontextprotocol/server-filesystem`, `/tmp`
 
-## CI/CD
-
-### Xcode Cloud
-The `ci_scripts/` directory contains scripts for Xcode Cloud workflows:
-- `ci_post_clone.sh` — resolves SPM dependencies after clone
-- `ci_post_xcodebuild.sh` — post-build validation
-
-### GitHub Actions
-`.github/workflows/release.yml` handles:
-- Build + sign with Developer ID certificate
-- Notarize with Apple
-- Create DMG + ZIP artifacts
-- Upload to GitHub Releases
-
-Required secrets: `MAC_CERT_P12_BASE64`, `MAC_CERT_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`
+## Known Issues (WIP)
+- Chat panel layout still needs polish — messages can overlap footer in some edge cases
+- Permission flow needs testing on fresh installs
+- MCP HTTP transport not yet tested with all server implementations
+- Tool execution has no user confirmation step (planned)
+- Conversation history stored in UserDefaults (should migrate to file-based storage)
 
 ## License
 
