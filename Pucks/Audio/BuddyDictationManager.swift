@@ -115,12 +115,26 @@ final class BuddyDictationManager: ObservableObject {
     /// Resolve the best available transcription provider.
     /// Priority: OpenAI > AssemblyAI > Apple Speech
     private func resolveProvider() -> BuddyTranscriptionProvider {
-        for provider in providers {
-            if provider.isConfigured {
-                return provider
+        // Respect user's selection from Settings
+        let selected = TranscriptionProviderType.current
+        let preferred: BuddyTranscriptionProvider? = {
+            switch selected {
+            case .openAI: return providers.first(where: { $0 is OpenAIAudioTranscriptionProvider })
+            case .deepgram: return providers.first(where: { $0 is DeepgramTranscriptionProvider })
+            case .assemblyAI: return providers.first(where: { $0 is AssemblyAIStreamingTranscriptionProvider })
+            case .appleSpeech: return providers.first(where: { $0 is AppleSpeechTranscriptionProvider })
             }
+        }()
+
+        if let preferred, preferred.isConfigured {
+            return preferred
         }
-        // Apple Speech is always the ultimate fallback
+
+        // Fallback: first configured provider
+        logger.info("Transcription: \(selected.name) preferred but not configured, falling back")
+        for provider in providers {
+            if provider.isConfigured { return provider }
+        }
         return providers.last!
     }
 

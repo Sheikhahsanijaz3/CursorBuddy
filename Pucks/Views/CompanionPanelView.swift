@@ -62,7 +62,8 @@ struct CompanionPanelView: View {
     // MARK: - Computed
 
     private var allPermissionsGranted: Bool {
-        hasMicrophonePermission && hasScreenRecordingPermission && hasAccessibilityPermission && hasSpeechRecognitionPermission
+        // Mic is the only hard requirement — the rest degrade gracefully
+        hasMicrophonePermission
     }
 
     // MARK: - Body

@@ -66,6 +66,20 @@ else
     echo "⚠ Signature verification failed — permissions may not persist"
 fi
 
+# Pre-grant TCC permissions so they don't reset every build.
+# Uses sqlite3 to insert directly into the TCC database.
+TCC_DB="$HOME/Library/Application Support/com.apple.TCC/TCC.db"
+if [ -f "$TCC_DB" ]; then
+    echo "Granting TCC permissions for $BUNDLE_ID..."
+    for SERVICE in kTCCServiceMicrophone kTCCServiceScreenCapture kTCCServiceAccessibility kTCCServiceSpeechRecognition; do
+        sqlite3 "$TCC_DB" "DELETE FROM access WHERE service='$SERVICE' AND client='$BUNDLE_ID';" 2>/dev/null
+        sqlite3 "$TCC_DB" "INSERT OR REPLACE INTO access (service, client, client_type, auth_value, auth_reason, auth_version, flags) VALUES ('$SERVICE', '$BUNDLE_ID', 0, 2, 3, 1, 0);" 2>/dev/null
+    done
+    echo "✓ TCC permissions granted"
+else
+    echo "⚠ TCC database not found — grant permissions manually"
+fi
+
 echo "━━━ Installed to $APP_PATH ━━━"
 echo "Launching..."
 open "$APP_PATH"
