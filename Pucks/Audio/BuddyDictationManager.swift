@@ -4,6 +4,12 @@ import Foundation
 import os
 import Speech
 
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let vadSpeakingStopped = Notification.Name("com.pucks.vadSpeakingStopped")
+}
+
 enum BuddyDictationPermissionError: LocalizedError {
     case microphoneDenied
     case speechRecognitionDenied
@@ -46,9 +52,15 @@ final class BuddyDictationManager: ObservableObject {
 
     private let providers: [BuddyTranscriptionProvider] = [
         OpenAIAudioTranscriptionProvider(),
+        DeepgramTranscriptionProvider(),
         AssemblyAIStreamingTranscriptionProvider(),
         AppleSpeechTranscriptionProvider()
     ]
+
+    // MARK: - VAD
+
+    /// Voice Activity Detection — enabled when user has VAD turned on in settings
+    private var vad: VoiceActivityDetector?
 
     // MARK: - Monitoring
 
@@ -64,7 +76,19 @@ final class BuddyDictationManager: ObservableObject {
 
     // MARK: - Init
 
-    init() {}
+    init() {
+        if UserDefaults.standard.bool(forKey: "vadEnabled") {
+            vad = VoiceActivityDetector()
+            vad?.onSpeakingStopped = { [weak self] in
+                // Emit a VAD stop event — CompanionManager listens for this
+                NotificationCenter.default.post(
+                    name: .vadSpeakingStopped,
+                    object: self
+                )
+            }
+            print("[BuddyDictationManager] VAD enabled (threshold: \(vad?.silenceThreshold ?? 0), silenceMs: \(vad?.silenceDurationMs ?? 0))")
+        }
+    }
 
     // MARK: - Permissions
 
@@ -153,6 +177,8 @@ final class BuddyDictationManager: ObservableObject {
         bufferedPCM16AudioData = Data()
         recordedAudioPowerHistory = []
         transcriptText = ""
+        vad?.reset()
+        vad?.startMonitoring()
 
         // Configure audio engine
         let inputNode = audioEngine.inputNode
@@ -206,6 +232,9 @@ final class BuddyDictationManager: ObservableObject {
             // Feed to transcription session
             self.transcriptionSession?.feedAudio(buffer: convertedBuffer)
 
+            // Push to VAD if enabled
+            self.vad?.pushBuffer(convertedBuffer)
+
             // Calculate power level
             if let channelData = buffer.floatChannelData?[0] {
                 let frameCount = Int(buffer.frameLength)
@@ -249,6 +278,7 @@ final class BuddyDictationManager: ObservableObject {
         isRecording = false
         audioPowerLevel = 0.0
         currentAudioPowerLevel = 0.0
+        vad?.stopMonitoring()
 
         // Get WAV data
         let wavData = pcmConverter.getWAVData()
@@ -287,5 +317,6 @@ final class BuddyDictationManager: ObservableObject {
         currentAudioPowerLevel = 0.0
         pcmConverter.reset()
         bufferedPCM16AudioData = Data()
+        vad?.stopMonitoring()
     }
 }

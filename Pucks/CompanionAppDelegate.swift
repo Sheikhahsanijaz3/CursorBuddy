@@ -3,9 +3,16 @@ import SwiftUI
 import ServiceManagement
 import PostHog
 import Foundation
+import Carbon
 
 @MainActor
 class CompanionAppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
+
+    // MARK: - Shared Instance
+
+    static var shared: CompanionAppDelegate {
+        NSApp.delegate as! CompanionAppDelegate
+    }
 
     // MARK: - Properties
 
@@ -14,7 +21,7 @@ class CompanionAppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var floatingSessionButtonManager: FloatingSessionButtonManager?
 
     // Push-to-talk
-    private var shortcutMonitor: GlobalPushToTalkShortcutMonitor?
+    private var shortcutMonitor: ShortcutMonitorWrapper?
     private var pttOverlayManager: GlobalPushToTalkOverlayManager?
     private var shortcutChangedObserver: NSObjectProtocol?
 
@@ -29,6 +36,7 @@ class CompanionAppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupPostHog()
         registerAsLoginItem()
+        setupMainMenu()
         initializeManagers()
     }
 
@@ -67,6 +75,99 @@ class CompanionAppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             } catch {
                 print("[Pucks] Failed to register as login item: \(error)")
             }
+        }
+    }
+
+    // MARK: - Main Menu
+
+    private func setupMainMenu() {
+        let mainMenu = NSMenu()
+
+        // App menu
+        let appMenuItem = NSMenuItem()
+        let appMenu = NSMenu()
+        appMenu.addItem(NSMenuItem(title: "About Pucks", action: #selector(showAbout), keyEquivalent: ""))
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ","))
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(NSMenuItem(title: "Hide Pucks", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h"))
+        let hideOthersItem = NSMenuItem(title: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
+        hideOthersItem.keyEquivalentModifierMask = [.command, .option]
+        appMenu.addItem(hideOthersItem)
+        appMenu.addItem(NSMenuItem(title: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: ""))
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(NSMenuItem(title: "Quit Pucks", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+
+        // Edit menu
+        let editMenuItem = NSMenuItem()
+        let editMenu = NSMenu(title: "Edit")
+        editMenu.addItem(NSMenuItem(title: "Undo", action: Selector(("undo:")), keyEquivalent: "z"))
+        editMenu.addItem(NSMenuItem(title: "Redo", action: Selector(("redo:")), keyEquivalent: "Z"))
+        editMenu.addItem(NSMenuItem.separator())
+        editMenu.addItem(NSMenuItem(title: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
+        editMenu.addItem(NSMenuItem(title: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
+        editMenu.addItem(NSMenuItem(title: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
+        editMenu.addItem(NSMenuItem(title: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
+        editMenuItem.submenu = editMenu
+        mainMenu.addItem(editMenuItem)
+
+        // View menu
+        let viewMenuItem = NSMenuItem()
+        let viewMenu = NSMenu(title: "View")
+        viewMenu.addItem(NSMenuItem(title: "Toggle Panel", action: #selector(togglePanel), keyEquivalent: "p"))
+        viewMenu.addItem(NSMenuItem(title: "Toggle Lens", action: #selector(toggleLens), keyEquivalent: "l"))
+        viewMenuItem.submenu = viewMenu
+        mainMenu.addItem(viewMenuItem)
+
+        // Window menu
+        let windowMenuItem = NSMenuItem()
+        let windowMenu = NSMenu(title: "Window")
+        windowMenu.addItem(NSMenuItem(title: "Minimize", action: #selector(NSWindow.miniaturize(_:)), keyEquivalent: "m"))
+        windowMenu.addItem(NSMenuItem(title: "Close", action: #selector(NSWindow.close), keyEquivalent: "w"))
+        windowMenu.addItem(NSMenuItem.separator())
+        windowMenu.addItem(NSMenuItem(title: "Bring All to Front", action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: ""))
+        windowMenuItem.submenu = windowMenu
+        mainMenu.addItem(windowMenuItem)
+
+        // Help menu
+        let helpMenuItem = NSMenuItem()
+        let helpMenu = NSMenu(title: "Help")
+        helpMenu.addItem(NSMenuItem(title: "Pucks Help", action: #selector(showHelp), keyEquivalent: "?"))
+        helpMenuItem.submenu = helpMenu
+        mainMenu.addItem(helpMenuItem)
+
+        NSApplication.shared.mainMenu = mainMenu
+        NSApplication.shared.windowsMenu = windowMenu
+        NSApplication.shared.helpMenu = helpMenu
+
+        print("[Pucks] Main menu configured.")
+    }
+
+    @objc private func showAbout() {
+        NSApp.orderFrontStandardAboutPanel(nil)
+    }
+
+    @objc private func showSettings() {
+        Task { @MainActor in
+            SettingsWindowController.shared.show()
+        }
+    }
+
+    @objc private func showHelp() {
+        if let url = URL(string: "https://pucks.ai/help") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    @objc private func togglePanel() {
+        menuBarPanelManager?.dismissPanel()
+    }
+
+    @objc private func toggleLens() {
+        Task { @MainActor in
+            LensWindowManager.shared.toggle()
         }
     }
 
@@ -165,18 +266,18 @@ class CompanionAppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     @MainActor private func setupPushToTalk(companionManager: CompanionManager) {
         shortcutMonitor?.stop()
 
-        let monitor = GlobalPushToTalkShortcutMonitor()
         let shortcutConfig = PushToTalkShortcutConfiguration.shared
-        monitor.keyCode = shortcutConfig.keyCode
-        monitor.modifiers = shortcutConfig.modifiers
 
-        monitor.onShortcutPressed = { [weak companionManager] in
-            // Callbacks come from the run loop thread — dispatch to MainActor
+        // Try modern CGEvent-based monitor first (better macOS integration)
+        let modernMonitor = ModernGlobalShortcutMonitor()
+        modernMonitor.keyCode = shortcutConfig.keyCode
+        modernMonitor.modifiers = shortcutConfig.modifiers
+
+        modernMonitor.onShortcutPressed = { [weak companionManager] in
             Task { @MainActor in
                 guard let manager = companionManager else { return }
                 print("[Pucks] Push-to-talk: shortcut PRESSED")
                 manager.isRecordingFromKeyboardShortcut = true
-                // PTT overlay disabled — cursor chip shows state instead
                 do {
                     try await manager.startSession()
                 } catch {
@@ -185,23 +286,55 @@ class CompanionAppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             }
         }
 
-        monitor.onShortcutReleased = { [weak companionManager] in
+        modernMonitor.onShortcutReleased = { [weak companionManager] in
             Task { @MainActor in
                 guard let manager = companionManager else { return }
                 print("[Pucks] Push-to-talk: shortcut RELEASED")
-                // PTT overlay disabled — cursor chip shows state instead
                 manager.isRecordingFromKeyboardShortcut = false
                 manager.stopSession()
             }
         }
 
-        let started = monitor.start()
-        self.shortcutMonitor = monitor
+        let modernStarted = modernMonitor.start()
 
-        if started {
-            print("[Pucks] Global push-to-talk hotkey active (\(shortcutConfig.label)).")
+        if modernStarted {
+            // Wrap in the same reference type for stop() compatibility
+            let wrapper = ShortcutMonitorWrapper()
+            wrapper.modernMonitor = modernMonitor
+            self.shortcutMonitor = wrapper
+            print("[Pucks] Global push-to-talk hotkey active (CGEvent, \(shortcutConfig.label)).")
         } else {
-            print("[Pucks] Push-to-talk failed to start.")
+            // Fall back to Carbon-based monitor
+            let carbonMonitor = GlobalPushToTalkShortcutMonitor()
+            carbonMonitor.keyCode = shortcutConfig.keyCode
+            carbonMonitor.modifiers = shortcutConfig.modifiers
+            carbonMonitor.onShortcutPressed = modernMonitor.onShortcutPressed
+            carbonMonitor.onShortcutReleased = modernMonitor.onShortcutReleased
+
+            let carbonStarted = carbonMonitor.start()
+            if carbonStarted {
+                let wrapper = ShortcutMonitorWrapper()
+                wrapper.carbonMonitor = carbonMonitor
+                self.shortcutMonitor = wrapper
+                print("[Pucks] Global push-to-talk hotkey active (Carbon, \(shortcutConfig.label)).")
+            } else {
+                print("[Pucks] Push-to-talk failed to start (both CGEvent and Carbon failed).")
+            }
         }
+    }
+}
+
+// MARK: - Shortcut Monitor Wrapper (unified interface)
+
+/// Unifies the modern CGEvent monitor and Carbon monitor behind a common stop() interface.
+final class ShortcutMonitorWrapper {
+    var modernMonitor: ModernGlobalShortcutMonitor?
+    var carbonMonitor: GlobalPushToTalkShortcutMonitor?
+
+    init() {}
+
+    func stop() {
+        modernMonitor?.stop()
+        carbonMonitor?.stop()
     }
 }

@@ -10,12 +10,15 @@ enum CompanionPermissionCenter {
     }
 
     static func hasScreenRecordingPermission() -> Bool {
-        if #available(macOS 11.0, *) {
+        // macOS 10.15+: CGPreflightScreenCaptureAccess is the official pre-check
+        if #available(macOS 10.15, *) {
             if CGPreflightScreenCaptureAccess() {
                 return true
             }
         }
 
+        // Fallback: try to enumerate windows. If we can read window names, permission is granted.
+        // This is a heuristic that works on older macOS versions.
         let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
 
         // When screen recording is granted, on-screen windows usually include readable names/owners.

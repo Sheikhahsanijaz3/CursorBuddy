@@ -62,6 +62,22 @@ class CompanionManager: ObservableObject {
             self.conversationHistory = history
             print("[CompanionManager] Restored \(history.count) conversation turn(s) from previous session.")
         }
+
+        // Listen for VAD stop events from BuddyDictationManager
+        NotificationCenter.default.addObserver(
+            forName: .vadSpeakingStopped,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self = self else { return }
+                // VAD detected silence — stop the recording session
+                if self.voiceState == .listening || self.voiceState == .thinking {
+                    print("[CompanionManager] VAD triggered stop.")
+                    self.stopSession()
+                }
+            }
+        }
     }
 
     // MARK: - Screenshot Interceptor
@@ -101,8 +117,8 @@ class CompanionManager: ObservableObject {
         ClaudeAPI()
     }()
 
-    lazy var ttsClient: ElevenLabsTTSClient = {
-        ElevenLabsTTSClient()
+    lazy var ttsClient: TTSClient = {
+        TTSClient.shared
     }()
 
     lazy var dictationManager: BuddyDictationManager = {

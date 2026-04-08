@@ -27,6 +27,8 @@ enum APIKeyConfig {
     static let assemblyAIStreamingToken = resolve("ASSEMBLYAI_STREAMING_TOKEN", plistKey: "AssemblyAIStreamingToken")
     static let anthropicKey = resolve("ANTHROPIC_API_KEY", plistKey: "AnthropicAPIKey")
     static let elevenLabsKey = resolve("ELEVENLABS_API_KEY", plistKey: "ElevenLabsAPIKey")
+    static let cartesiaKey = resolve("CARTESIA_API_KEY", plistKey: "CartesiaAPIKey")
+    static let deepgramKey = resolve("DEEPGRAM_API_KEY", plistKey: "DeepgramAPIKey")
 
     // MARK: - Resolution
 
@@ -62,5 +64,7 @@ enum APIKeyConfig {
         print("[APIKeyConfig] AssemblyAI: \(assemblyAIKey != nil || assemblyAIStreamingToken != nil ? "✓" : "✗")")
         print("[APIKeyConfig] Anthropic: \(anthropicKey != nil ? "✓" : "✗")")
         print("[APIKeyConfig] ElevenLabs: \(elevenLabsKey != nil ? "✓" : "✗")")
+        print("[APIKeyConfig] Cartesia: \(cartesiaKey != nil ? "✓" : "✗")")
+        print("[APIKeyConfig] Deepgram: \(deepgramKey != nil ? "✓" : "✗")")
     }
 }

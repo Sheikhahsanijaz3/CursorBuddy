@@ -2,6 +2,40 @@ import AVFoundation
 import Foundation
 import os
 
+/// Unified TTS client that routes to the configured provider (ElevenLabs or Cartesia).
+class TTSClient {
+    static let shared = TTSClient()
+
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.pucks", category: "TTSClient")
+
+    var audioPlayer: AVAudioPlayer?
+
+    /// Which provider to use based on settings
+    private var provider: TTSProviderType {
+        TTSProviderType.current
+    }
+
+    /// Speaks text using the configured TTS provider.
+    func speak(text: String) async throws -> Data {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return Data()
+        }
+
+        switch provider {
+        case .elevenLabs:
+            return try await ElevenLabsTTSClient.shared.speak(text: text)
+        case .cartesia:
+            return try await CartesiaTTSClient.shared.speak(text: text)
+        }
+    }
+
+    func stopPlayback() {
+        ElevenLabsTTSClient.shared.stopPlayback()
+        CartesiaTTSClient.shared.stopPlayback()
+    }
+}
+
+/// ElevenLabs TTS client.
 class ElevenLabsTTSClient {
     static let shared = ElevenLabsTTSClient()
 
