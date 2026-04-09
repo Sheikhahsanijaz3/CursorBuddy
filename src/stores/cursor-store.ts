@@ -78,6 +78,7 @@ interface CursorStoreState {
   setAudioLevel: (level: number) => void;
   setTriangleRotationDegrees: (degrees: number) => void;
   setBuddyFlightScale: (scale: number) => void;
+  setFlightFrame: (position: { x: number; y: number }, rotation: number, scale: number) => void;
   setNavigationBubbleText: (text: string) => void;
   setNavigationBubbleOpacity: (opacity: number) => void;
   setNavigationBubbleScale: (scale: number) => void;
@@ -106,8 +107,14 @@ export const useCursorStore = create<CursorStoreState>((set) => ({
   cursorOpacity: 1.0,
 
   // ── Setters ───────────────────────────────────────────────
-  setBuddyPosition: (position) => set({ buddyPosition: position }),
-  setSystemCursorPosition: (position) => set({ systemCursorPosition: position }),
+  setBuddyPosition: (position) => set((state) => {
+    if (state.buddyPosition.x === position.x && state.buddyPosition.y === position.y) return state;
+    return { buddyPosition: position };
+  }),
+  setSystemCursorPosition: (position) => set((state) => {
+    if (state.systemCursorPosition.x === position.x && state.systemCursorPosition.y === position.y) return state;
+    return { systemCursorPosition: position };
+  }),
   setNavigationMode: (mode) => set({ navigationMode: mode }),
   setFlyToTarget: (target) => set({ flyToTarget: target }),
   setIsReturningToCursor: (returning) => set({ isReturningToCursor: returning }),
@@ -117,6 +124,17 @@ export const useCursorStore = create<CursorStoreState>((set) => ({
   setAudioLevel: (level) => set({ audioLevel: level }),
   setTriangleRotationDegrees: (degrees) => set({ triangleRotationDegrees: degrees }),
   setBuddyFlightScale: (scale) => set({ buddyFlightScale: scale }),
+  setFlightFrame: (position: { x: number; y: number }, rotation: number, scale: number) => set((state) => {
+    const posChanged = state.buddyPosition.x !== position.x || state.buddyPosition.y !== position.y;
+    const rotChanged = state.triangleRotationDegrees !== rotation;
+    const scaleChanged = state.buddyFlightScale !== scale;
+    if (!posChanged && !rotChanged && !scaleChanged) return state;
+    return {
+      ...(posChanged ? { buddyPosition: position } : {}),
+      ...(rotChanged ? { triangleRotationDegrees: rotation } : {}),
+      ...(scaleChanged ? { buddyFlightScale: scale } : {}),
+    };
+  }),
   setNavigationBubbleText: (text) => set({ navigationBubbleText: text }),
   setNavigationBubbleOpacity: (opacity) => set({ navigationBubbleOpacity: opacity }),
   setNavigationBubbleScale: (scale) => set({ navigationBubbleScale: scale }),

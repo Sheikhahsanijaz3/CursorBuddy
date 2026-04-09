@@ -35,9 +35,19 @@ export function useCursorTracking() {
   const animationFrameRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef<number | null>(null);
   const isInitializedRef = useRef(false);
+  const lastMoveXRef = useRef(0);
+  const lastMoveYRef = useRef(0);
 
   useEffect(() => {
     let mounted = true;
+
+    /** Deduplicated moveOverlayWindow — skips if position hasn't changed by ≥0.5px */
+    function deduplicatedMove(x: number, y: number) {
+      if (Math.abs(x - lastMoveXRef.current) < 0.5 && Math.abs(y - lastMoveYRef.current) < 0.5) return;
+      lastMoveXRef.current = x;
+      lastMoveYRef.current = y;
+      moveOverlayWindow(x, y);
+    }
 
     // ── Spring animation loop (runs in both Electron and browser) ──
     function springTick(timestamp: number) {
@@ -69,7 +79,7 @@ export function useCursorTracking() {
         store.setBuddyPosition({ x: smoothedX, y: smoothedY });
 
         // In Electron, also move the window with the spring-smoothed position
-        moveOverlayWindow(smoothedX, smoothedY);
+        deduplicatedMove(smoothedX, smoothedY);
       } else {
         lastFrameTimeRef.current = timestamp;
       }
@@ -137,6 +147,7 @@ export function useCursorTracking() {
         springYRef.current = createSpringState(buddyTargetY);
         isInitializedRef.current = true;
       }
+
     }
 
     if (!isElectronEnvironment()) {

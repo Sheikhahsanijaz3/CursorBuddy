@@ -26,19 +26,6 @@ export function useBuddyNavigation() {
   const streamTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startReturnFlightRef = useRef<() => void>(() => {});
 
-  // Use stable action references from the store — no reactive subscriptions needed.
-  // Position reads are done imperatively via getState() inside callbacks.
-  const setBuddyPosition = useCursorStore((s) => s.setBuddyPosition);
-  const setNavigationMode = useCursorStore((s) => s.setNavigationMode);
-  const setTriangleRotationDegrees = useCursorStore((s) => s.setTriangleRotationDegrees);
-  const setBuddyFlightScale = useCursorStore((s) => s.setBuddyFlightScale);
-  const setNavigationBubbleText = useCursorStore((s) => s.setNavigationBubbleText);
-  const setNavigationBubbleOpacity = useCursorStore((s) => s.setNavigationBubbleOpacity);
-  const setNavigationBubbleScale = useCursorStore((s) => s.setNavigationBubbleScale);
-  const setIsReturningToCursor = useCursorStore((s) => s.setIsReturningToCursor);
-  const setCursorPositionAtNavigationStart = useCursorStore((s) => s.setCursorPositionAtNavigationStart);
-  const resetToFollowingCursor = useCursorStore((s) => s.resetToFollowingCursor);
-
   /** Cancel any in-progress animation and clean up timers */
   const cancelEverything = useCallback(() => {
     cancelFlightRef.current?.();
@@ -57,11 +44,11 @@ export function useBuddyNavigation() {
         return;
       }
 
-      setNavigationBubbleText(phrase.slice(0, charIndex + 1));
+      useCursorStore.getState().setNavigationBubbleText(phrase.slice(0, charIndex + 1));
 
       // Trigger scale-bounce on first character
       if (charIndex === 0) {
-        setNavigationBubbleScale(1.0);
+        useCursorStore.getState().setNavigationBubbleScale(1.0);
       }
 
       const delay =
@@ -73,19 +60,20 @@ export function useBuddyNavigation() {
         streamBubbleText(phrase, charIndex + 1, onComplete);
       }, delay);
     },
-    [setNavigationBubbleText, setNavigationBubbleScale]
+    []
   );
 
   /** Phase 3: Start pointing — show bubble, then schedule return flight */
   const startPointing = useCallback(
     (bubbleText?: string) => {
-      setNavigationMode("pointing-at-target");
-      setTriangleRotationDegrees(DS.defaultTriangleRotation);
+      const store = useCursorStore.getState();
+      store.setNavigationMode("pointing-at-target");
+      store.setTriangleRotationDegrees(DS.defaultTriangleRotation);
 
       // Reset bubble for scale-bounce entrance
-      setNavigationBubbleText("");
-      setNavigationBubbleOpacity(1.0);
-      setNavigationBubbleScale(0.5);
+      store.setNavigationBubbleText("");
+      store.setNavigationBubbleOpacity(1.0);
+      store.setNavigationBubbleScale(0.5);
 
       const phrase =
         bubbleText ??
@@ -97,7 +85,7 @@ export function useBuddyNavigation() {
           const currentMode = useCursorStore.getState().navigationMode;
           if (currentMode !== "pointing-at-target") return;
 
-          setNavigationBubbleOpacity(0);
+          useCursorStore.getState().setNavigationBubbleOpacity(0);
 
           // Wait for fade out, then start return flight
           holdTimeoutRef.current = setTimeout(() => {
@@ -111,29 +99,23 @@ export function useBuddyNavigation() {
 
       eventBus.emit("cursor:arrived");
     },
-    [
-      setNavigationMode,
-      setTriangleRotationDegrees,
-      setNavigationBubbleText,
-      setNavigationBubbleOpacity,
-      setNavigationBubbleScale,
-      streamBubbleText,
-    ]
+    [streamBubbleText]
   );
 
   /** Phase 4: Fly back to cursor position */
   const startReturnFlight = useCallback(() => {
-    const currentCursorPos = useCursorStore.getState().systemCursorPosition;
-    const currentBuddyPos = useCursorStore.getState().buddyPosition;
+    const state = useCursorStore.getState();
+    const currentCursorPos = state.systemCursorPosition;
+    const currentBuddyPos = state.buddyPosition;
 
     const destination = {
       x: currentCursorPos.x + DS.cursorOffset.x,
       y: currentCursorPos.y + DS.cursorOffset.y,
     };
 
-    setNavigationMode("navigating-to-target");
-    setIsReturningToCursor(true);
-    setCursorPositionAtNavigationStart({ ...currentCursorPos });
+    state.setNavigationMode("navigating-to-target");
+    state.setIsReturningToCursor(true);
+    state.setCursorPositionAtNavigationStart({ ...currentCursorPos });
 
     // Renderer keeps control of window position for return flight
     setFollowingCursor(false);
@@ -142,28 +124,18 @@ export function useBuddyNavigation() {
       from: currentBuddyPos,
       to: destination,
       onFrame: (frame) => {
-        setBuddyPosition(frame.position);
-        setTriangleRotationDegrees(frame.rotationDegrees);
-        setBuddyFlightScale(frame.scale);
+        useCursorStore.getState().setFlightFrame(frame.position, frame.rotationDegrees, frame.scale);
         // Move the overlay window along the return flight arc
         moveOverlayWindow(frame.position.x, frame.position.y);
       },
       onComplete: () => {
         // Main process resumes cursor-following
         setFollowingCursor(true);
-        resetToFollowingCursor();
+        useCursorStore.getState().resetToFollowingCursor();
         eventBus.emit("cursor:returned");
       },
     });
-  }, [
-    setBuddyPosition,
-    setNavigationMode,
-    setTriangleRotationDegrees,
-    setBuddyFlightScale,
-    setIsReturningToCursor,
-    setCursorPositionAtNavigationStart,
-    resetToFollowingCursor,
-  ]);
+  }, []);
 
   // Keep the ref in sync so startPointing always calls the latest version
   startReturnFlightRef.current = startReturnFlight;
@@ -173,8 +145,9 @@ export function useBuddyNavigation() {
     (target: FlyToTarget) => {
       cancelEverything();
 
-      const currentBuddyPos = useCursorStore.getState().buddyPosition;
-      const currentCursorPos = useCursorStore.getState().systemCursorPosition;
+      const state = useCursorStore.getState();
+      const currentBuddyPos = state.buddyPosition;
+      const currentCursorPos = state.systemCursorPosition;
 
       // Offset target so buddy sits beside the element, not on top
       const destination = {
@@ -182,9 +155,9 @@ export function useBuddyNavigation() {
         y: target.y + 12,
       };
 
-      setCursorPositionAtNavigationStart({ ...currentCursorPos });
-      setNavigationMode("navigating-to-target");
-      setIsReturningToCursor(false);
+      state.setCursorPositionAtNavigationStart({ ...currentCursorPos });
+      state.setNavigationMode("navigating-to-target");
+      state.setIsReturningToCursor(false);
 
       // Renderer takes control of window position during flight
       setFollowingCursor(false);
@@ -193,9 +166,7 @@ export function useBuddyNavigation() {
         from: currentBuddyPos,
         to: destination,
         onFrame: (frame) => {
-          setBuddyPosition(frame.position);
-          setTriangleRotationDegrees(frame.rotationDegrees);
-          setBuddyFlightScale(frame.scale);
+          useCursorStore.getState().setFlightFrame(frame.position, frame.rotationDegrees, frame.scale);
           // Move the overlay window along the flight arc (no-op in browser)
           moveOverlayWindow(frame.position.x, frame.position.y);
         },
@@ -206,16 +177,7 @@ export function useBuddyNavigation() {
         },
       });
     },
-    [
-      cancelEverything,
-      setBuddyPosition,
-      setNavigationMode,
-      setTriangleRotationDegrees,
-      setBuddyFlightScale,
-      setIsReturningToCursor,
-      setCursorPositionAtNavigationStart,
-      startPointing,
-    ]
+    [cancelEverything, startPointing]
   );
 
   // ── Wire up event bus ───────────────────────────────────────

@@ -3,6 +3,10 @@
  *
  * Audio-reactive waveform bars shown while listening.
  * Renders at a fixed local position within the OverlayViewport.
+ *
+ * Canvas dimensions are set once on mount. The draw loop uses
+ * clearRect instead of resetting canvas.width/height every frame.
+ * Audio level syncs via store subscription (no React re-renders).
  */
 
 import React, { useRef, useEffect, useCallback } from "react";
@@ -16,19 +20,41 @@ const BAR_PROFILE = [0.4, 0.7, 1.0, 0.7, 0.4];
 const BAR_WIDTH = 2;
 const BAR_GAP = 2;
 const BAR_RADIUS = 1.5;
+const TOTAL_WIDTH = BAR_COUNT * BAR_WIDTH + (BAR_COUNT - 1) * BAR_GAP;
+const LOGICAL_HEIGHT = 30;
 
 export const BlueCursorWaveform: React.FC = () => {
   const voiceState = useCursorStore((s) => s.voiceState);
-  const audioLevel = useCursorStore((s) => s.audioLevel);
   const cursorOpacity = useCursorStore((s) => s.cursorOpacity);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
-  const audioLevelRef = useRef(audioLevel);
-  audioLevelRef.current = audioLevel;
+  const audioLevelRef = useRef(0);
+  const dprRef = useRef(1);
   useRuntimeConfig();
 
   const color = runtimeConfig.cursorColor;
   const isVisible = voiceState === "listening";
+
+  // Sync audioLevel from store without React re-renders
+  useEffect(() => {
+    const unsub = useCursorStore.subscribe((state) => {
+      audioLevelRef.current = state.audioLevel;
+    });
+    audioLevelRef.current = useCursorStore.getState().audioLevel;
+    return unsub;
+  }, []);
+
+  // Set canvas dimensions once on mount
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    dprRef.current = dpr;
+    canvas.width = TOTAL_WIDTH * dpr;
+    canvas.height = LOGICAL_HEIGHT * dpr;
+    canvas.style.width = `${TOTAL_WIDTH}px`;
+    canvas.style.height = `${LOGICAL_HEIGHT}px`;
+  }, []);
 
   const draw = useCallback(
     (timestamp: number) => {
@@ -37,15 +63,9 @@ export const BlueCursorWaveform: React.FC = () => {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      const dpr = window.devicePixelRatio || 1;
-      const totalWidth = BAR_COUNT * BAR_WIDTH + (BAR_COUNT - 1) * BAR_GAP;
-      const logicalHeight = 30;
-      canvas.width = totalWidth * dpr;
-      canvas.height = logicalHeight * dpr;
-      canvas.style.width = `${totalWidth}px`;
-      canvas.style.height = `${logicalHeight}px`;
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, totalWidth, logicalHeight);
+      const dpr = dprRef.current;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, TOTAL_WIDTH, LOGICAL_HEIGHT);
 
       const animationPhase = (timestamp / 1000) * 3.6;
       const currentAudioLevel = audioLevelRef.current;
@@ -59,7 +79,7 @@ export const BlueCursorWaveform: React.FC = () => {
         const barHeight = 3 + reactiveHeight + idlePulse;
 
         const barX = barIndex * (BAR_WIDTH + BAR_GAP);
-        const barY = (logicalHeight - barHeight) / 2;
+        const barY = (LOGICAL_HEIGHT - barHeight) / 2;
 
         ctx.fillStyle = color;
         ctx.beginPath();

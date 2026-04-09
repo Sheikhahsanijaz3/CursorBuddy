@@ -193,17 +193,41 @@ function createPanelWindow(trayBounds) {
 
 // ── Cursor Tracking ───────────────────────────────────────────
 
+let lastDisplayCheck = 0;
+let cachedDisplay = null;
+const DISPLAY_CHECK_INTERVAL = 500;
+const cursorMsg = { x: 0, y: 0 };
+let lastSentCursorX = -Infinity;
+let lastSentCursorY = -Infinity;
+
 function startCursorTracking() {
   cursorTrackingInterval = setInterval(() => {
     const overlayWindow = getOverlayWindow();
     if (!overlayWindow || overlayWindow.isDestroyed()) return;
     const cursorPoint = screen.getCursorScreenPoint();
-    const currentDisplay = screen.getDisplayNearestPoint(cursorPoint);
-    if (currentDisplay.id !== lastCursorDisplayId) {
-      lastCursorDisplayId = currentDisplay.id;
+
+    // Throttle display detection — only refresh every DISPLAY_CHECK_INTERVAL ms
+    const now = Date.now();
+    if (now - lastDisplayCheck > DISPLAY_CHECK_INTERVAL) {
+      lastDisplayCheck = now;
+      cachedDisplay = screen.getDisplayNearestPoint(cursorPoint);
+    }
+    if (cachedDisplay && cachedDisplay.id !== lastCursorDisplayId) {
+      lastCursorDisplayId = cachedDisplay.id;
       broadcastScreenBounds();
     }
-    sendToOverlay("cursor-position", { x: cursorPoint.x, y: cursorPoint.y });
+
+    // Skip IPC if cursor hasn't moved more than 0.5px
+    const dx = cursorPoint.x - lastSentCursorX;
+    const dy = cursorPoint.y - lastSentCursorY;
+    if (dx * dx + dy * dy < 0.25) return;
+    lastSentCursorX = cursorPoint.x;
+    lastSentCursorY = cursorPoint.y;
+
+    // Reuse pre-allocated message object
+    cursorMsg.x = cursorPoint.x;
+    cursorMsg.y = cursorPoint.y;
+    sendToOverlay("cursor-position", cursorMsg);
   }, 16);
 }
 
@@ -213,6 +237,7 @@ function stopCursorTracking() {
 
 // ── IPC: Overlay ──────────────────────────────────────────────
 
+let lastWinX = -1, lastWinY = -1;
 ipcMain.on("set-window-position", (_event, pos) => {
   try {
     const overlayWindow = getOverlayWindow();
@@ -221,6 +246,9 @@ ipcMain.on("set-window-position", (_event, pos) => {
     const x = parseInt(pos.x, 10);
     const y = parseInt(pos.y, 10);
     if (isNaN(x) || isNaN(y)) return;
+    if (Math.abs(x - lastWinX) < 1 && Math.abs(y - lastWinY) < 1) return;
+    lastWinX = x;
+    lastWinY = y;
     overlayWindow.setPosition(x, y);
   } catch (_) {}
 });

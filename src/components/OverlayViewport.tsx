@@ -7,11 +7,11 @@
  *
  * - Electron mode: the viewport IS the window. moveOverlayWindow() sets
  *   the Electron window.setPosition() imperatively at ~60fps (no React in the loop).
- * - Browser mode: a CSS-transformed div mimics the moving window,
- *   with a spring transition for smooth cursor following.
+ * - Browser mode: a CSS-transformed div mimics the moving window.
+ *   Position updates bypass React entirely via store subscription + ref.
  */
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { useCursorStore } from "../stores/cursor-store";
 import { DS } from "../lib/design-tokens";
 import { isElectronEnvironment } from "../lib/is-electron";
@@ -19,13 +19,34 @@ import { isElectronEnvironment } from "../lib/is-electron";
 export const OverlayViewport: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const buddyPosition = useCursorStore((s) => s.buddyPosition);
-  const navigationMode = useCursorStore((s) => s.navigationMode);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // In Electron, the window is positioned by the main process (cursor
-  // following) or by moveOverlayWindow() (during flight). We just
-  // render a static container at the viewport size.
-  if (isElectronEnvironment()) {
+  // In Electron, the window is positioned by the main process — no need
+  // to subscribe to buddyPosition at all.
+  const isElectron = isElectronEnvironment();
+
+  // Browser mode: subscribe to buddyPosition and update CSS transform
+  // directly on the DOM node, bypassing React re-renders entirely.
+  useEffect(() => {
+    if (isElectron) return;
+    const unsub = useCursorStore.subscribe((state) => {
+      if (containerRef.current) {
+        const x = state.buddyPosition.x - DS.viewport.localBuddyX;
+        const y = state.buddyPosition.y - DS.viewport.localBuddyY;
+        containerRef.current.style.transform = `translate(${x}px, ${y}px)`;
+      }
+    });
+    // Set initial position
+    const { buddyPosition } = useCursorStore.getState();
+    if (containerRef.current) {
+      const x = buddyPosition.x - DS.viewport.localBuddyX;
+      const y = buddyPosition.y - DS.viewport.localBuddyY;
+      containerRef.current.style.transform = `translate(${x}px, ${y}px)`;
+    }
+    return unsub;
+  }, [isElectron]);
+
+  if (isElectron) {
     return (
       <div
         style={{
@@ -41,21 +62,15 @@ export const OverlayViewport: React.FC<{ children: React.ReactNode }> = ({
     );
   }
 
-  // Browser mode: position a div via CSS transform.
-  // No CSS transition — the spring physics loop in use-cursor-tracking
-  // updates buddyPosition at 60fps with real damped spring math.
-  const viewportScreenX = buddyPosition.x - DS.viewport.localBuddyX;
-  const viewportScreenY = buddyPosition.y - DS.viewport.localBuddyY;
-
   return (
     <div
+      ref={containerRef}
       style={{
         position: "fixed",
         left: 0,
         top: 0,
         width: DS.viewport.width,
         height: DS.viewport.height,
-        transform: `translate(${viewportScreenX}px, ${viewportScreenY}px)`,
         willChange: "transform",
         pointerEvents: "none",
         overflow: "visible",

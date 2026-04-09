@@ -33,37 +33,32 @@ export const CursorOverlay: React.FC = () => {
   useElectronBridge();
 
   const isOverlayVisible = useCursorStore((s) => s.isOverlayVisible);
-  const setVoiceState = useCursorStore((s) => s.setVoiceState);
-  const setAudioLevel = useCursorStore((s) => s.setAudioLevel);
-  const setIsOverlayVisible = useCursorStore((s) => s.setIsOverlayVisible);
-  const setNavigationBubbleText = useCursorStore((s) => s.setNavigationBubbleText);
-  const setNavigationBubbleOpacity = useCursorStore((s) => s.setNavigationBubbleOpacity);
-  const setNavigationBubbleScale = useCursorStore((s) => s.setNavigationBubbleScale);
 
   // ── Wire event bus to store ─────────────────────────────────
+  // Use getState() for action functions to avoid selector re-renders.
   useEffect(() => {
     const handleVoiceState = (payload: {
       state: "idle" | "listening" | "processing" | "responding";
     }) => {
-      setVoiceState(payload.state);
+      useCursorStore.getState().setVoiceState(payload.state);
     };
 
     const handleAudioLevel = (payload: { level: number }) => {
-      setAudioLevel(payload.level);
+      useCursorStore.getState().setAudioLevel(payload.level);
     };
 
-    const handleShow = () => setIsOverlayVisible(true);
-    const handleHide = () => setIsOverlayVisible(false);
+    const handleShow = () => useCursorStore.getState().setIsOverlayVisible(true);
+    const handleHide = () => useCursorStore.getState().setIsOverlayVisible(false);
 
     const handleBubbleText = (payload: { text: string }) => {
       if (payload.text) {
-        setNavigationBubbleText(payload.text);
-        setNavigationBubbleOpacity(1.0);
-        setNavigationBubbleScale(1.0);
+        useCursorStore.getState().setNavigationBubbleText(payload.text);
+        useCursorStore.getState().setNavigationBubbleOpacity(1.0);
+        useCursorStore.getState().setNavigationBubbleScale(1.0);
       } else {
-        setNavigationBubbleOpacity(0);
-        setNavigationBubbleScale(0.5);
-        setTimeout(() => setNavigationBubbleText(""), 200);
+        useCursorStore.getState().setNavigationBubbleOpacity(0);
+        useCursorStore.getState().setNavigationBubbleScale(0.5);
+        setTimeout(() => useCursorStore.getState().setNavigationBubbleText(""), 200);
       }
     };
 
@@ -80,7 +75,7 @@ export const CursorOverlay: React.FC = () => {
       eventBus.off("cursor:hide", handleHide);
       eventBus.off("cursor:set-bubble-text", handleBubbleText);
     };
-  }, [setVoiceState, setAudioLevel, setIsOverlayVisible, setNavigationBubbleText, setNavigationBubbleOpacity, setNavigationBubbleScale]);
+  }, []);
 
   if (!isOverlayVisible) return null;
 
