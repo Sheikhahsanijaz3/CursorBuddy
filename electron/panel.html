@@ -1,0 +1,2228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CursorBuddy</title>
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent}
+html{font-size:13px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:1rem;color:#ECEEED;user-select:none;-webkit-user-select:none}
+
+/* ── Shell ─────────────────────────────────────────── */
+.shell{margin:6px;height:calc(100% - 12px);min-height:0;background:rgba(16,18,17,0.97);border:1px solid rgba(59,130,246,0.12);border-radius:24px;display:flex;flex-direction:column;overflow:hidden}
+/* Composer (ChatGPT-style input area) */
+.composer{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:10px 12px 6px;display:flex;flex-direction:column}
+.composer textarea{background:none!important;border:none!important;outline:none!important;color:#e2e8f0;font-family:inherit;font-size:0.9rem;line-height:1.5;resize:none;min-height:52px;max-height:120px;padding:0;width:100%;box-shadow:none!important;overflow-y:auto}
+.composer textarea::placeholder{color:#6B736F}
+.composer-toolbar{display:flex;align-items:center;justify-content:space-between;padding-top:6px;margin-top:2px;border-top:1px solid rgba(255,255,255,0.04)}
+.composer-actions{display:flex;gap:2px}
+.composer-btn{width:30px;height:30px;border-radius:8px;border:none;background:transparent;color:#6B736F;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.12s}
+.composer-btn:hover{background:rgba(255,255,255,0.06);color:#ADB5B2}
+.composer-btn i{font-size:15px}
+.composer-btn.recording{color:#f87171;animation:mic-pulse 1.5s ease infinite}
+.composer-btn.recording i{animation:mic-throb 0.8s ease infinite}
+.composer-btn.processing{animation:mic-spin-border 1.2s linear infinite}
+.composer-send{width:32px;height:32px;border-radius:10px;border:none;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.composer-send:hover{filter:brightness(0.85);transform:scale(1.05)}
+.composer-send:disabled{background:#2a2d30;color:#4a524e;cursor:default;transform:none}
+.composer-send i{font-size:16px}
+
+/* Keep old class for back-compat with mic state toggling */
+.chat-action-btn{display:none}
+/* Shortcut rows */
+.shortcut-row{display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem}
+.shortcut-label{font-size:0.85rem;color:#ADB5B2;min-width:6rem}
+.shortcut-keys{font-family:'SF Mono','Fira Code',monospace;font-size:0.8rem;color:#e2e8f0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:3px 8px;min-width:8rem;text-align:center}
+.shortcut-keys.capturing{border-color:var(--accent,rgba(59,130,246,0.5));color:var(--accent,#60a5fa);animation:pulse-border 1s ease infinite}
+@keyframes pulse-border{0%,100%{border-color:rgba(59,130,246,0.5)}50%{border-color:rgba(59,130,246,0.2)}}
+
+/* Sidebar dragging */
+.tab-btn.dragging{opacity:0.4}
+.tab-btn.drag-over{border-top:2px solid var(--accent,#3b82f6)}
+
+/* Key row with eye toggle */
+.key-row{display:flex;gap:4px;align-items:center}
+.key-row input{flex:1}
+.eye-btn{width:28px;height:28px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#6B736F;border-radius:0.5rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.12s}
+.eye-btn:hover{color:#ADB5B2;background:rgba(255,255,255,0.04)}
+.eye-btn i{font-size:14px}
+
+/* Rounded rectangle toggle switch */
+.toggle-switch{position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0;cursor:pointer}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;inset:0;background:rgba(255,255,255,0.08);border-radius:4px;transition:background 0.2s}
+.toggle-track::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#6B736F;border-radius:3px;transition:all 0.2s}
+.toggle-switch input:checked+.toggle-track{background:var(--accent-bg,rgba(59,130,246,0.3))}
+.toggle-switch input:checked+.toggle-track::after{left:18px;background:var(--accent,#3b82f6);border-radius:3px}
+
+.reasoning-toggle{margin-top:6px;padding:6px 8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:0.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap}
+.reasoning-toggle label{font-size:0.8rem;color:#ADB5B2;display:flex;align-items:center;gap:0.4rem;cursor:pointer}
+.reasoning-toggle .budget-row{display:flex;align-items:center;gap:0.4rem;width:100%;margin-top:2px}
+.reasoning-toggle .budget-row input[type=range]{flex:1;height:3px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,0.1);border-radius:2px;outline:none}
+.reasoning-toggle .budget-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:3px;background:var(--accent,#3b82f6);cursor:pointer;border:none}
+.reasoning-toggle .budget-row .val{font-size:0.75rem;font-family:monospace;color:var(--accent,#60a5fa);min-width:3rem;text-align:right}
+@keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.3)}50%{box-shadow:0 0 0 12px rgba(239,68,68,0)}}
+@keyframes mic-throb{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@keyframes mic-spin-border{0%{border-color:rgba(59,130,246,0.5) rgba(59,130,246,0.15) rgba(59,130,246,0.15) rgba(59,130,246,0.15)}25%{border-color:rgba(59,130,246,0.15) rgba(59,130,246,0.5) rgba(59,130,246,0.15) rgba(59,130,246,0.15)}50%{border-color:rgba(59,130,246,0.15) rgba(59,130,246,0.15) rgba(59,130,246,0.5) rgba(59,130,246,0.15)}75%{border-color:rgba(59,130,246,0.15) rgba(59,130,246,0.15) rgba(59,130,246,0.15) rgba(59,130,246,0.5)}}
+
+/* ── Titlebar ──────────────────────────────────────── */
+.titlebar{display:flex;align-items:center;padding:0.75rem 1rem 0;-webkit-app-region:drag;app-region:drag;flex-shrink:0}
+.titlebar-text{flex:1;font-size:1rem;font-weight:600;color:var(--accent,#3b82f6)}
+.titlebar-close{width:1.8rem;height:1.8rem;border-radius:0.6rem;border:none;background:transparent;color:#6B736F;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-app-region:no-drag;app-region:no-drag}
+.titlebar-close:hover{background:rgba(244,63,94,0.15);color:#f43f5e}
+
+/* ── Layout: sidebar + content ─────────────────────── */
+.layout{display:flex;flex:1;overflow:hidden}
+
+/* ── Sidebar ───────────────────────────────────────── */
+.sidebar{width:4rem;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:0.75rem 0;gap:0.15rem;border-right:1px solid rgba(255,255,255,0.04)}
+.tab-btn{width:3.1rem;height:2.75rem;border:none;background:transparent;color:#6B736F;border-radius:0.6rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.1rem;font-size:0.6rem;letter-spacing:0.3px;transition:all 0.12s}
+.tab-btn:hover{background:rgba(255,255,255,0.05);color:#ADB5B2}
+.tab-btn.active{background:var(--accent-bg,rgba(59,130,246,0.15));color:var(--accent,#60a5fa)}
+.tab-btn i{font-size:1.2rem}
+
+/* ── Content ───────────────────────────────────────── */
+.content{flex:1;overflow:hidden;padding:0;position:relative;min-height:0}
+.tab-page{padding:0.9rem;overflow-y:auto;display:none;position:absolute;inset:0}
+.tab-page.active{display:block}
+#page-chat.active{padding:0;display:flex;flex-direction:column}
+.content::-webkit-scrollbar{width:4px}
+.content::-webkit-scrollbar-track{background:transparent}
+.content::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
+
+
+/* ── Shared ────────────────────────────────────────── */
+h3{font-size:1.15rem;font-weight:600;margin-bottom:0.3rem}
+.desc{font-size:0.85rem;color:#6B736F;margin-bottom:1rem;line-height:1.5}
+.section{margin-bottom:1.5rem}
+.section-label{font-size:0.77rem;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:#4a524e;margin-bottom:0.75rem}
+.divider{height:1px;background:rgba(255,255,255,0.04);margin:1.2rem 0}
+
+/* ── Inputs ────────────────────────────────────────── */
+.field{margin-bottom:0.75rem}
+.field-label{font-size:0.85rem;color:#ADB5B2;margin-bottom:0.3rem;display:flex;align-items:center;gap:0.45rem}
+.field-label .hint{color:#4a524e;font-weight:400}
+.field-row{display:flex;gap:0.45rem;align-items:center}
+input[type="text"],input[type="password"]{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;font-family:'SF Mono','Fira Code',monospace;outline:none;transition:border-color 0.15s}
+input[type="text"]:focus,input[type="password"]:focus{border-color:rgba(59,130,246,0.4)}
+input[type="text"]::placeholder,input[type="password"]::placeholder{color:#3a413d}
+
+/* ── Selectable cards ──────────────────────────────── */
+.option-card{padding:0.6rem 0.75rem;border-radius:0.6rem;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);cursor:pointer;margin-bottom:0.3rem;transition:all 0.12s}
+.option-card:hover{background:rgba(255,255,255,0.04)}
+.option-card.selected{background:rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.25)}
+.option-card .name{font-size:0.9rem;font-weight:500}
+.option-card .sub{font-size:0.77rem;color:#6B736F;margin-top:0.15rem}
+.option-card .check{color:#22c55e;font-size:1rem;float:right;margin-top:0.15rem}
+.tab-page::-webkit-scrollbar{width:4px}
+.tab-page::-webkit-scrollbar-track{background:transparent}
+.tab-page::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
+
+/* ── Sliders ───────────────────────────────────────── */
+.slider-row{display:flex;align-items:center;gap:0.6rem;margin-bottom:0.75rem}
+.slider-row label{font-size:0.85rem;color:#ADB5B2;min-width:5.4rem}
+.slider-row input[type="range"]{flex:1;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,0.1);border-radius:2px;outline:none}
+.slider-row input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:3px;background:var(--accent,#3b82f6);cursor:pointer;border:none}
+.slider-row input[type="range"]::-webkit-slider-runnable-track{height:4px;border-radius:2px}
+.slider-row .val{font-size:0.85rem;font-family:monospace;color:var(--accent,#60a5fa);min-width:2.8rem;text-align:right}
+
+/* ── Buttons ───────────────────────────────────────── */
+.btn-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+button.btn{font-family:inherit;font-size:0.85rem;padding:0.45rem 0.75rem;border-radius:0.6rem;border:1px solid rgba(55,59,57,0.5);background:rgba(32,34,33,0.6);color:#ADB5B2;cursor:pointer;transition:all 0.12s;flex:1;min-width:0}
+button.btn:hover{background:rgba(59,130,246,0.12);border-color:rgba(59,130,246,0.25);color:#e2e8f0}
+button.btn.active{background:var(--accent-bg,rgba(59,130,246,0.18));border-color:var(--accent,rgba(59,130,246,0.35));color:var(--accent,#60a5fa)}
+
+/* ── CLI status ────────────────────────────────────── */
+.cli-row{display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.75rem;border-radius:0.6rem;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);margin-bottom:0.45rem}
+.cli-row .dot{width:0.6rem;height:0.6rem;border-radius:50%;flex-shrink:0}
+.cli-row .dot.ok{background:#22c55e}
+.cli-row .dot.missing{background:#ef4444}
+.cli-row .dot.loading{background:#f59e0b}
+.cli-row .info{flex:1}
+.cli-row .info .cli-name{font-size:0.9rem;font-weight:500}
+.cli-row .info .cli-detail{font-size:0.77rem;color:#6B736F;margin-top:0.1rem;font-family:monospace}
+
+/* ── Status bar ────────────────────────────────────── */
+.status{font-family:'SF Mono',monospace;font-size:10px;color:#4a524e;padding:6px 10px;margin-bottom:8px}
+.status .val{color:var(--accent,#60a5fa)}
+
+/* ── Btn grid (playground) ─────────────────────────── */
+.btn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="titlebar">
+    <div class="titlebar-text">CursorBuddy <span style="font-size:0.65rem;color:#4a524e;font-weight:400;margin-left:4px">v0.1.0</span></div>
+    <button class="titlebar-close" onclick="panelAPI.hidePanel()" title="Close">✕</button>
+  </div>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <button class="tab-btn active" data-tab="chat" title="Chat" draggable="true"><i class="icon-message-square"></i><span>Chat</span></button>
+      <button class="tab-btn" data-tab="keys" title="Secrets" draggable="true"><i class="icon-key-round"></i><span>Secrets</span></button>
+      <button class="tab-btn" data-tab="models" title="Models" draggable="true"><i class="icon-brain"></i><span>Models</span></button>
+      <button class="tab-btn" data-tab="stt" title="Transcription" draggable="true"><i class="icon-mic"></i><span>STT</span></button>
+      <button class="tab-btn" data-tab="tts" title="Text-to-Speech" draggable="true"><i class="icon-volume-2"></i><span>TTS</span></button>
+      <button class="tab-btn" data-tab="cli" title="CLI Tools" draggable="true"><i class="icon-terminal"></i><span>CLI</span></button>
+      <button class="tab-btn" data-tab="appearance" title="Appearance" draggable="true"><i class="icon-palette"></i><span>Look</span></button>
+      <button class="tab-btn" data-tab="mcp" title="MCP" draggable="true"><i class="icon-plug"></i><span>MCP</span></button>
+      <button class="tab-btn" data-tab="shortcuts" title="Shortcuts" draggable="true"><i class="icon-keyboard"></i><span>Keys</span></button>
+      <button class="tab-btn" data-tab="playground" title="Playground" draggable="true"><i class="icon-play"></i><span>Play</span></button>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ═══ CHAT ═══ -->
+      <div class="tab-page active" id="page-chat">
+        <!-- Messages -->
+        <div id="chat-messages" style="flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 14px;display:flex;flex-direction:column;gap:6px">
+          <div style="color:#3a413d;font-size:12px;text-align:center;padding:40px 20px;line-height:1.6" class="chat-placeholder">Type a message or use push-to-talk</div>
+        </div>
+        <!-- Debug bar (shown when debug is on) -->
+        <div id="debug-bar" style="display:none;padding:4px 12px;font-family:'SF Mono','Fira Code',monospace;font-size:0.65rem;color:#6B736F;background:rgba(0,0,0,0.3);border-top:1px solid rgba(255,255,255,0.04);line-height:1.6;user-select:text;-webkit-user-select:text">
+          <span id="debug-cursor">cursor: —</span> · <span id="debug-screen">screen: —</span> · <span id="debug-app">app: —</span> · <span id="debug-voice">voice: idle</span>
+        </div>
+        <!-- Composer (ChatGPT-style) -->
+        <div style="padding:8px 12px 10px">
+          <div id="chat-transcript-hint" style="display:none;font-size:0.75rem;color:#93c5fd;font-style:italic;padding:0 4px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+          <div class="composer">
+            <!-- Attachments row inside the composer box -->
+            <div id="chat-attachments" style="display:none;padding:0 0 6px;display:flex;gap:6px;flex-wrap:wrap"></div>
+            <!-- Textarea -->
+            <textarea id="chat-input" rows="3" placeholder="Ask CursorBuddy…"></textarea>
+            <!-- Bottom toolbar -->
+            <div class="composer-toolbar">
+              <div class="composer-actions">
+                <button class="composer-btn" id="btn-attach" onclick="captureAndShow()" title="Screenshot"><i class="icon-image"></i></button>
+                <button class="composer-btn" id="btn-mic" onclick="toggleMic()" title="Push to talk"><i class="icon-mic" id="mic-icon"></i></button>
+                <button class="composer-btn" id="btn-clear" onclick="clearChat()" title="Clear"><i class="icon-trash-2"></i></button>
+              </div>
+              <button class="composer-send" id="chat-send" onclick="chatSend()" title="Send (Enter)"><i class="icon-arrow-up"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ PLAYGROUND ═══ -->
+      <div class="tab-page" id="page-playground">
+        <h3>Playground</h3>
+        <p class="desc">Test the cursor overlay.</p>
+        <div class="status">
+          screen: <span class="val" id="screen-info">…</span> ·
+          voice: <span class="val" id="voice-state">idle</span>
+        </div>
+        <div class="section">
+          <div class="section-label">Voice State</div>
+          <div class="btn-row">
+            <button class="btn active" id="btn-idle" onclick="setVoice('idle')">Idle</button>
+            <button class="btn" id="btn-listening" onclick="setVoice('listening')">Listen</button>
+            <button class="btn" id="btn-processing" onclick="setVoice('processing')">Process</button>
+            <button class="btn" id="btn-responding" onclick="setVoice('responding')">Respond</button>
+          </div>
+          <button class="btn" id="btn-audio" onclick="toggleAudio()" style="width:100%">Start Audio Sim</button>
+        </div>
+        <div class="section">
+          <div class="section-label">Flight</div>
+          <div class="btn-grid">
+            <button class="btn" onclick="flyAnchor('top-left')">↖ TL</button>
+            <button class="btn" onclick="flyAnchor('top-center')">↑ T</button>
+            <button class="btn" onclick="flyAnchor('top-right')">↗ TR</button>
+            <button class="btn" onclick="flyAnchor('center-left')">← L</button>
+            <button class="btn" onclick="flyAnchor('center')">● C</button>
+            <button class="btn" onclick="flyAnchor('center-right')">→ R</button>
+            <button class="btn" onclick="flyAnchor('bottom-left')">↙ BL</button>
+            <button class="btn" onclick="flyAnchor('bottom-center')">↓ B</button>
+            <button class="btn" onclick="flyAnchor('bottom-right')">↘ BR</button>
+          </div>
+          <div class="btn-row" style="margin-top:5px">
+            <button class="btn" onclick="flyRandom()">Random</button>
+            <button class="btn" onclick="flyRandomBubble()">Random + Bubble</button>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-label">Visibility</div>
+          <div class="btn-row">
+            <button class="btn" onclick="send('cursor:show')">Show</button>
+            <button class="btn" onclick="send('cursor:hide')">Hide</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="section">
+          <div class="section-label">Debug</div>
+          <p class="desc" style="margin-bottom:6px">Show live cursor coordinates, screen ID, and active app in the chat area.</p>
+          <div class="btn-row">
+            <button class="btn" id="btn-debug" onclick="toggleDebugOverlay()">Enable Debug</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="section">
+          <div class="section-label">Calibration</div>
+          <p class="desc" style="margin-bottom:6px">Fix cursor pointing accuracy. A red target appears on screen — the buddy tries to fly to it. You tell us how far off it lands.</p>
+          <div id="cal-status" style="font-size:0.8rem;color:#4a524e;margin-bottom:6px"></div>
+          <div class="btn-row">
+            <button class="btn" id="cal-start-btn" onclick="calStart()">Start Calibration</button>
+            <button class="btn" onclick="calReset()">Reset to Default</button>
+          </div>
+          <div id="cal-results" style="font-size:0.75rem;color:#4a524e;margin-top:6px"></div>
+        </div>
+      </div>
+
+      <!-- ═══ API KEYS ═══ -->
+      <div class="tab-page" id="page-keys">
+        <h3>Secrets</h3>
+        <p class="desc">Stored in ~/.cursorbuddy/settings.json. Auto-saved on change.</p>
+        <div class="field"><div class="field-label">Anthropic <span class="hint">— Claude chat, vision, computer use</span></div><div class="key-row"><input type="password" id="key-anthropic" placeholder="sk-ant-..." data-key="anthropicKey" oninput="saveKey(this)"><button class="eye-btn" onclick="toggleKeyVis(this)"><i class="icon-eye-off"></i></button></div></div>
+        <div class="field"><div class="field-label">OpenAI <span class="hint">— Whisper STT, GPT, Codex, computer use</span></div><div class="key-row"><input type="password" id="key-openai" placeholder="sk-..." data-key="openaiKey" oninput="saveKey(this)"><button class="eye-btn" onclick="toggleKeyVis(this)"><i class="icon-eye-off"></i></button></div></div>
+        <div class="field"><div class="field-label">ElevenLabs <span class="hint">— Text-to-speech</span></div><div class="key-row"><input type="password" id="key-elevenlabs" placeholder="xi-..." data-key="elevenlabsKey" oninput="saveKey(this)"><button class="eye-btn" onclick="toggleKeyVis(this)"><i class="icon-eye-off"></i></button></div></div>
+        <div class="field"><div class="field-label">Cartesia <span class="hint">— Sonic TTS (ultra-low latency)</span></div><div class="key-row"><input type="password" id="key-cartesia" placeholder="sk-..." data-key="cartesiaKey" oninput="saveKey(this)"><button class="eye-btn" onclick="toggleKeyVis(this)"><i class="icon-eye-off"></i></button></div></div>
+        <div class="field"><div class="field-label">Deepgram <span class="hint">— Streaming STT with VAD</span></div><div class="key-row"><input type="password" id="key-deepgram" placeholder="dg-..." data-key="deepgramKey" oninput="saveKey(this)"><button class="eye-btn" onclick="toggleKeyVis(this)"><i class="icon-eye-off"></i></button></div></div>
+        <div class="field"><div class="field-label">AssemblyAI <span class="hint">— Streaming STT</span></div><div class="key-row"><input type="password" id="key-assemblyai" placeholder="..." data-key="assemblyaiKey" oninput="saveKey(this)"><button class="eye-btn" onclick="toggleKeyVis(this)"><i class="icon-eye-off"></i></button></div></div>
+      </div>
+
+      <!-- ═══ MODELS ═══ -->
+      <div class="tab-page" id="page-models">
+        <h3>Models</h3>
+        <p class="desc">Each role picks a provider + model independently.</p>
+
+        <div class="section">
+          <div class="section-label">Inference</div>
+          <p class="desc" style="margin-bottom:6px">Chat, vision, voice responses.</p>
+          <select id="chat-provider" onchange="slotProviderChanged('chat')" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none"></select>
+          <select id="chat-model" onchange="slotModelChanged('chat')" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none;margin-top:8px"></select>
+          <div id="chat-reasoning" class="reasoning-toggle"></div>
+        </div>
+        <div class="divider"></div>
+
+        <div class="section">
+          <div class="section-label">Computer Use</div>
+          <p class="desc" style="margin-bottom:6px">Screen interaction. Needs computer-use capable models.</p>
+          <select id="cu-provider" onchange="slotProviderChanged('cu')" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none"></select>
+          <select id="cu-model" onchange="slotModelChanged('cu')" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none;margin-top:8px"></select>
+          <div id="cu-reasoning" class="reasoning-toggle"></div>
+          <div class="slider-row" style="margin-top:6px"><label>CU Resolution</label><select id="cu-resolution" onchange="saveCUResolution()" style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.4rem 0.6rem;color:#ECEEED;font-size:0.85rem;outline:none"><option value="1280x800">1280x800 (Mac)</option><option value="1024x768">1024x768 (4:3)</option><option value="1366x768">1366x768 (16:9)</option></select></div>
+        </div>
+        <div class="divider"></div>
+
+        <div class="section">
+          <div class="section-label">Fast</div>
+          <p class="desc" style="margin-bottom:6px">Quick tasks, element detection, classification.</p>
+          <select id="fast-provider" onchange="slotProviderChanged('fast')" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none"></select>
+          <select id="fast-model" onchange="slotModelChanged('fast')" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none;margin-top:8px"></select>
+          <div id="fast-reasoning" class="reasoning-toggle"></div>
+        </div>
+        <div class="divider"></div>
+
+        <div class="section">
+          <div class="section-label">Planning</div>
+          <p class="desc" style="margin-bottom:6px">Multi-step reasoning, architecture, complex problems.</p>
+          <select id="plan-provider" onchange="slotProviderChanged('plan')" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none"></select>
+          <select id="plan-model" onchange="slotModelChanged('plan')" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none;margin-top:8px"></select>
+          <div id="plan-reasoning" class="reasoning-toggle"></div>
+        </div>
+        <div class="divider"></div>
+
+        <div class="section">
+          <div class="section-label">Tooling</div>
+          <p class="desc" style="margin-bottom:6px">Tool calling, function execution, MCP actions.</p>
+          <select id="tool-provider" onchange="slotProviderChanged('tool')" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none"></select>
+          <select id="tool-model" onchange="slotModelChanged('tool')" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none;margin-top:8px"></select>
+          <div id="tool-reasoning" class="reasoning-toggle"></div>
+        </div>
+        <div class="divider"></div>
+
+        <div class="section">
+          <div class="section-label">Inference Settings</div>
+          <div class="slider-row"><label>Temperature</label><input type="range" id="temperature" min="0" max="1" step="0.05" value="0.7" oninput="saveSlider('temperature',this.value)"><span class="val" id="temperature-val">0.7</span></div>
+          <div class="slider-row"><label>Max tokens</label><input type="range" id="maxTokens" min="256" max="4096" step="256" value="1024" oninput="saveSlider('maxTokens',this.value)"><span class="val" id="maxTokens-val">1024</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="section">
+          <div class="section-label">Local LLM Endpoints</div>
+          <div class="field"><div class="field-label">Ollama URL</div><input type="text" id="ollamaUrl" placeholder="http://localhost:11434" data-key="ollamaUrl" oninput="saveKey(this)" value="http://localhost:11434"></div>
+          <div class="field"><div class="field-label">LM Studio URL</div><input type="text" id="lmstudioUrl" placeholder="http://localhost:1234" data-key="lmstudioUrl" oninput="saveKey(this)" value="http://localhost:1234"></div>
+          <button class="btn" onclick="refreshLocalModels()" style="width:100%">Refresh Local Models</button>
+        </div>
+      </div>
+      <div class="tab-page" id="page-stt">
+        <h3>Transcription</h3>
+        <p class="desc">Choose how your voice is transcribed to text.</p>
+
+        <div class="section">
+          <div class="section-label">Microphone</div>
+          <div class="field">
+            <select id="mic-device" onchange="saveMicDevice()" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none">
+              <option value="">Default microphone</option>
+            </select>
+          </div>
+          <div id="mic-permission-status" style="font-size:0.77rem;color:#4a524e;margin-top:4px"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="section">
+          <div class="section-label">Provider</div>
+          <div class="option-card selected" data-stt="assemblyai" onclick="selectSTT(this)">
+            <span class="check">✓</span>
+            <div class="name">AssemblyAI</div>
+            <div class="sub">Streaming via WebSocket. Requires API key.</div>
+          </div>
+          <div class="option-card" data-stt="openai" onclick="selectSTT(this)">
+            <span class="check" style="display:none">✓</span>
+            <div class="name">OpenAI Whisper</div>
+            <div class="sub">Upload-based. Most accurate. Requires OpenAI key.</div>
+          </div>
+          <div class="option-card" data-stt="deepgram" onclick="selectSTT(this)">
+            <span class="check" style="display:none">✓</span>
+            <div class="name">Deepgram</div>
+            <div class="sub">Streaming with built-in VAD. Requires Deepgram key.</div>
+          </div>
+          <div class="option-card" data-stt="apple" onclick="selectSTT(this)">
+            <span class="check" style="display:none">✓</span>
+            <div class="name">Apple Speech (offline)</div>
+            <div class="sub">On-device. No API key. Privacy-friendly.</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="section">
+          <div class="section-label">Voice Activity Detection</div>
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem">
+            <label style="font-size:0.85rem;color:#ADB5B2;min-width:5.4rem">Enabled</label>
+            <span class="toggle-switch"><input type="checkbox" id="vadEnabled" onchange="saveVADEnabled()"><span class="toggle-track"></span></span>
+            <span style="font-size:0.77rem;color:#4a524e">Auto-stop when you stop speaking</span>
+          </div>
+          <div class="slider-row">
+            <label>Threshold</label>
+            <input type="range" id="vadThreshold" min="0.01" max="0.3" step="0.01" value="0.03" oninput="saveSlider('vadThreshold',this.value)">
+            <span class="val" id="vadThreshold-val">0.03</span>
+          </div>
+          <div class="slider-row">
+            <label>Silence (ms)</label>
+            <input type="range" id="vadSilence" min="300" max="3000" step="100" value="800" oninput="saveSlider('vadSilence',this.value)">
+            <span class="val" id="vadSilence-val">800</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ TTS ═══ -->
+      <div class="tab-page" id="page-tts">
+        <h3>Text-to-Speech</h3>
+        <p class="desc">CursorBuddy speaks responses aloud.</p>
+        <div class="section">
+          <div class="section-label">Provider</div>
+          <div class="option-card selected" data-tts="elevenlabs" onclick="selectTTS(this)">
+            <span class="check">✓</span>
+            <div class="name">ElevenLabs</div>
+            <div class="sub">High quality neural voices. Requires ElevenLabs key.</div>
+          </div>
+          <div class="option-card" data-tts="cartesia" onclick="selectTTS(this)">
+            <span class="check" style="display:none">✓</span>
+            <div class="name">Cartesia (Sonic)</div>
+            <div class="sub">Real-time ultra-low latency. Requires Cartesia key.</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <div class="field-label">Voice ID</div>
+          <input type="text" id="voiceId" placeholder="21m00Tcm4TlvDq8ikWAM" data-key="voiceId" oninput="saveKey(this)">
+        </div>
+        <div class="slider-row">
+          <label>Speed</label>
+          <input type="range" id="ttsSpeed" min="0.5" max="2.0" step="0.1" value="1.0" oninput="saveSlider('ttsSpeed',this.value)">
+          <span class="val" id="ttsSpeed-val">1.0×</span>
+        </div>
+      </div>
+
+      <!-- ═══ CLI TOOLS ═══ -->
+      <div class="tab-page" id="page-cli">
+        <h3>CLI Tools</h3>
+        <p class="desc">Detected tools on this system.</p>
+        <div id="cli-list">
+          <div class="cli-row" id="cli-claude"><div class="dot loading"></div><div class="info"><div class="cli-name">Claude Code</div><div class="cli-detail">checking…</div></div></div>
+          <div class="cli-row" id="cli-codex"><div class="dot loading"></div><div class="info"><div class="cli-name">Codex</div><div class="cli-detail">checking…</div></div></div>
+          <div class="cli-row" id="cli-ollama"><div class="dot loading"></div><div class="info"><div class="cli-name">Ollama</div><div class="cli-detail">checking…</div></div></div>
+          <div class="cli-row" id="cli-lms"><div class="dot loading"></div><div class="info"><div class="cli-name">LM Studio</div><div class="cli-detail">checking…</div></div></div>
+        </div>
+      </div>
+
+      <!-- ═══ APPEARANCE ═══ -->
+      <div class="tab-page" id="page-appearance">
+        <h3>Appearance</h3>
+        <p class="desc">Customize the cursor companion.</p>
+
+        <div class="section">
+          <div class="section-label">Theme</div>
+          <div id="theme-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="field">
+          <div class="field-label">Cursor Color</div>
+          <div class="field-row">
+            <input type="text" id="cursorColor" placeholder="#3b82f6" data-key="cursorColor" oninput="saveKey(this)" style="flex:1">
+            <input type="color" id="cursorColorPicker" value="#3b82f6" oninput="syncColorPicker(this.value)" style="width:28px;height:28px;border:none;border-radius:8px;padding:0;cursor:pointer;background:transparent;flex-shrink:0">
+          </div>
+        </div>
+        <div class="slider-row"><label>Size</label><input type="range" id="cursorSize" min="12" max="24" step="1" value="16" oninput="saveSlider('cursorSize',this.value)"><span class="val" id="cursorSize-val">16</span></div>
+        <div class="slider-row"><label>Glow</label><input type="range" id="glowIntensity" min="0" max="20" step="1" value="8" oninput="saveSlider('glowIntensity',this.value)"><span class="val" id="glowIntensity-val">8</span></div>
+        <div class="divider"></div>
+        <div class="section-label">Spring Physics</div>
+        <div class="slider-row"><label>Response</label><input type="range" id="springResponse" min="0.05" max="0.5" step="0.01" value="0.2" oninput="saveSlider('springResponse',this.value)"><span class="val" id="springResponse-val">0.20</span></div>
+        <div class="slider-row"><label>Damping</label><input type="range" id="springDamping" min="0.3" max="1.0" step="0.05" value="0.6" oninput="saveSlider('springDamping',this.value)"><span class="val" id="springDamping-val">0.60</span></div>
+        <div class="divider"></div>
+        <div class="slider-row"><label>Bubble hold</label><input type="range" id="bubbleHold" min="1" max="8" step="0.5" value="3" oninput="saveSlider('bubbleHold',this.value)"><span class="val" id="bubbleHold-val">3.0s</span></div>
+        <div class="divider"></div>
+        <div class="section-label">Display</div>
+        <div class="slider-row"><label>UI Scale</label><input type="range" id="displayScale" min="80" max="150" step="10" value="100" oninput="setDisplayScale(this.value)"><span class="val" id="displayScale-val">100%</span></div>
+        <div class="divider"></div>
+        <div class="section-label">Font</div>
+        <div class="field">
+          <div class="field-label">UI Font</div>
+          <select id="uiFont" onchange="setUIFont(this.value)" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none">
+            <option value="system">System Default</option>
+            <option value="'Inter', sans-serif">Inter</option>
+            <option value="'IBM Plex Sans', sans-serif">IBM Plex Sans</option>
+            <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
+            <option value="'Geist', sans-serif">Geist</option>
+            <option value="'Nunito', sans-serif">Nunito</option>
+            <option value="'Lato', sans-serif">Lato</option>
+            <option value="'Source Sans 3', sans-serif">Source Sans 3</option>
+            <option value="Georgia, serif">Georgia (Serif)</option>
+            <option value="'Palatino Linotype', Palatino, serif">Palatino (Serif)</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="field-label">Code / Mono Font</div>
+          <select id="monoFont" onchange="setMonoFont(this.value)" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none">
+            <option value="system">System Default</option>
+            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+            <option value="'IBM Plex Mono', monospace">IBM Plex Mono</option>
+            <option value="'Fira Code', monospace">Fira Code</option>
+            <option value="'Source Code Pro', monospace">Source Code Pro</option>
+            <option value="'Cascadia Code', monospace">Cascadia Code</option>
+            <option value="'SF Mono', monospace">SF Mono</option>
+            <option value="'Menlo', monospace">Menlo</option>
+            <option value="'Consolas', monospace">Consolas</option>
+          </select>
+        </div>
+        <div id="font-preview" style="margin-top:8px;padding:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:0.5rem">
+          <div style="font-size:0.9rem;margin-bottom:4px">The quick brown fox jumps over the lazy dog.</div>
+          <div style="font-size:0.8rem;color:#6B736F" id="mono-preview"><code>const buddy = CursorBuddy.init();</code></div>
+        </div>
+      </div>
+
+      <!-- ═══ SHORTCUTS ═══ -->
+      <div class="tab-page" id="page-shortcuts">
+        <h3>Keyboard Shortcuts</h3>
+        <p class="desc">Customise key bindings. Click "Capture" then press your desired key combo.</p>
+
+        <div class="section">
+          <div class="section-label">Push-to-Talk</div>
+          <div class="shortcut-row">
+            <span class="shortcut-label">Record voice</span>
+            <kbd class="shortcut-keys" id="shortcut-ptt"></kbd>
+            <button class="btn" style="flex:none;padding:3px 10px" onclick="captureShortcut('ptt')">Capture</button>
+            <button class="btn" style="flex:none;padding:3px 8px" id="btn-reset-ptt">Reset</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="section">
+          <div class="section-label">Panel</div>
+          <div class="shortcut-row">
+            <span class="shortcut-label">Toggle panel</span>
+            <kbd class="shortcut-keys" id="shortcut-panel">Click tray icon</kbd>
+            <span style="font-size:0.75rem;color:#4a524e">(system tray)</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="section">
+          <div class="section-label">Cursor</div>
+          <div class="shortcut-row">
+            <span class="shortcut-label">Show / Hide</span>
+            <kbd class="shortcut-keys" id="shortcut-cursor">Ctrl + Alt + C</kbd>
+            <button class="btn" style="flex:none;padding:3px 10px" onclick="captureShortcut('cursor')">Capture</button>
+            <button class="btn" style="flex:none;padding:3px 8px" onclick="resetShortcut('cursor','Ctrl+Alt+C')">Reset</button>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-label">Element select</span>
+            <kbd class="shortcut-keys" id="shortcut-select">Ctrl + Alt + S</kbd>
+            <button class="btn" style="flex:none;padding:3px 10px" onclick="captureShortcut('select')">Capture</button>
+            <button class="btn" style="flex:none;padding:3px 8px" onclick="resetShortcut('select','Ctrl+Alt+S')">Reset</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="section">
+          <div class="section-label">Reset Everything</div>
+          <p class="desc" style="margin-bottom:6px">Reset all settings to defaults. This cannot be undone.</p>
+          <div class="btn-row">
+            <button class="btn" style="border-color:rgba(239,68,68,0.3);color:#fca5a5" onclick="resetAllSettings()">Reset All Settings</button>
+            <button class="btn" style="border-color:rgba(239,68,68,0.3);color:#fca5a5" onclick="resetAppearance()">Reset Appearance</button>
+            <button class="btn" style="border-color:rgba(239,68,68,0.3);color:#fca5a5" onclick="resetModels()">Reset Models</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ MCP ═══ -->
+      <div class="tab-page" id="page-mcp">
+        <h3>MCP</h3>
+        <p class="desc">Model Context Protocol — expose CursorBuddy as a server or connect to external servers.</p>
+
+        <!-- CursorBuddy as MCP Server -->
+        <div class="section">
+          <div class="section-label">CursorBuddy MCP Server (SSE)</div>
+          <div class="option-card" style="cursor:default">
+            <div class="name">Status: <span id="mcp-server-status" style="color:#f59e0b">stopped</span></div>
+            <div class="sub" id="mcp-server-url" style="margin-top:2px">Start to get the SSE endpoint URL.</div>
+          </div>
+          <div class="field" style="margin-top:6px">
+            <div class="field-label">Port</div>
+            <input type="text" id="mcp-port" placeholder="6274" value="6274" style="width:100px">
+          </div>
+          <div class="btn-row" style="margin-top:6px">
+            <button class="btn" id="mcp-start-btn" onclick="mcpServerStart()">Start Server</button>
+            <button class="btn" onclick="mcpServerStop()">Stop</button>
+            <button class="btn" onclick="mcpServerRefresh()">Refresh</button>
+          </div>
+          <div style="margin-top:10px;font-size:0.77rem;color:#4a524e">
+            <div style="margin-bottom:6px"><b style="color:#6B736F">Tools:</b> cursor_fly_to, cursor_show/hide, screenshot_capture, tts_speak, cursor_set_voice_state, cursor_set_audio_level</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <b style="color:#6B736F">Config for:</b>
+              <select id="mcp-config-format" onchange="updateMCPConfig()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:3px 8px;color:#ADB5B2;font-size:0.75rem;outline:none">
+                <option value="claude">Claude Code (.claude.json)</option>
+                <option value="cursor">Cursor (.cursor/mcp.json)</option>
+                <option value="codex">Codex</option>
+                <option value="windsurf">Windsurf</option>
+                <option value="generic">Generic MCP</option>
+              </select>
+              <button class="btn" style="flex:none;padding:2px 10px;font-size:0.72rem" onclick="copyMCPConfig()" id="mcp-copy-btn">⎘ Copy</button>
+            </div>
+            <pre style="background:rgba(0,0,0,0.2);padding:8px 10px;border-radius:8px;margin-top:2px;font-size:0.7rem;color:#ADB5B2;overflow-x:auto;white-space:pre;line-height:1.5;cursor:pointer" id="mcp-claude-config" onclick="copyMCPConfig()">Start the server first</pre>
+            <div id="mcp-instructions" style="margin-top:6px;font-size:0.7rem;color:#4a524e;line-height:1.5"></div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Connect to external MCP servers -->
+        <div class="section">
+          <div class="section-label">External MCP Servers</div>
+          <p class="desc" style="margin-bottom:6px">Connect to external MCP servers to give the AI extra tools.</p>
+          <div id="mcp-servers-list"></div>
+          <div class="divider"></div>
+          <div class="section-label">Add Server</div>
+          <div class="field"><div class="field-label">Name</div><input type="text" id="mcp-add-name" placeholder="my-server"></div>
+          <div class="field"><div class="field-label">Command</div><input type="text" id="mcp-add-cmd" placeholder="npx -y @modelcontextprotocol/server-filesystem /tmp"></div>
+          <button class="btn" onclick="mcpAddServer()" style="width:100%">Connect</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Discovered tools -->
+        <div class="section">
+          <div class="section-label">Discovered Tools</div>
+          <div id="mcp-tools-list" style="font-size:0.8rem;color:#4a524e">No tools discovered.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+const api = window.panelAPI;
+let settings = {};
+let screenBounds = {x:0,y:0,width:1440,height:900};
+let audioSimInterval = null;
+
+// ── Platform-aware shortcut labels ───────────────────────
+const IS_MAC = navigator.platform.toUpperCase().includes('MAC');
+
+/** Convert an internal shortcut string to a platform-appropriate display label.
+ *  e.g. "Ctrl+Alt+Space" → "⌃ ⌥ Space" on macOS, unchanged on Windows/Linux. */
+function platformShortcutLabel(shortcut) {
+  if (!IS_MAC) return shortcut;
+  return shortcut
+    .replace(/Ctrl\s*\+\s*/gi, '⌃ ')
+    .replace(/Alt\s*\+\s*/gi, '⌥ ')
+    .replace(/Shift\s*\+\s*/gi, '⇧ ')
+    .replace(/Meta\s*\+\s*/gi, '⌘ ')
+    .replace(/Cmd\s*\+\s*/gi, '⌘ ');
+}
+
+/** The default PTT shortcut — stored as cross-platform, displayed per platform. */
+const PTT_DEFAULT = 'Ctrl+Alt+Space';
+const PTT_DISPLAY = platformShortcutLabel(PTT_DEFAULT);
+
+// ── Tab switching ─────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const page = document.getElementById('page-' + btn.dataset.tab);
+    if (page) page.classList.add('active');
+  });
+});
+
+// ── Settings load/save ────────────────────────────────────
+let saveDebounce = null;
+async function loadAllSettings() {
+  settings = await api.loadSettings() || {};
+  // Populate key fields
+  document.querySelectorAll('[data-key]').forEach(el => {
+    if (settings[el.dataset.key]) el.value = settings[el.dataset.key];
+  });
+  // Populate sliders
+  ['temperature','maxTokens','vadThreshold','vadSilence','ttsSpeed','cursorSize','glowIntensity','springResponse','springDamping','bubbleHold','displayScale'].forEach(k => {
+    if (settings[k] !== undefined) {
+      const el = document.getElementById(k);
+      if (el) { el.value = settings[k]; updateSliderDisplay(k, settings[k]); }
+    }
+  });
+  // Provider selections
+  if (settings.sttProvider) selectSTTByValue(settings.sttProvider);
+  if (settings.ttsProvider) selectTTSByValue(settings.ttsProvider);
+  if (settings.cursorColor) {
+    document.getElementById('cursorColorPicker').value = settings.cursorColor;
+  }
+  if (settings.cuResolution) document.getElementById('cu-resolution').value = settings.cuResolution;
+  if (settings.uiFont) { document.getElementById('uiFont').value = settings.uiFont; setUIFont(settings.uiFont); }
+  if (settings.monoFont) { document.getElementById('monoFont').value = settings.monoFont; setMonoFont(settings.monoFont); }
+  buildThemeGrid();
+  if (settings.theme && settings.theme !== 'default') applyTheme(settings.theme);
+  // Apply display scale on load
+  if (settings.displayScale) {
+    document.documentElement.style.fontSize = (13 * settings.displayScale / 100) + 'px';
+  }
+  buildAllModelSlots();
+
+  // Set platform-aware shortcut labels
+  const pttEl = document.getElementById('shortcut-ptt');
+  if (pttEl) pttEl.textContent = platformShortcutLabel(settings.shortcut_ptt || PTT_DEFAULT);
+  const resetBtn = document.getElementById('btn-reset-ptt');
+  if (resetBtn) resetBtn.onclick = () => resetShortcut('ptt', PTT_DEFAULT);
+  // Update chat placeholder with PTT shortcut
+  document.querySelectorAll('.chat-placeholder').forEach(el => {
+    el.textContent = 'Type a message or use push-to-talk (' + PTT_DISPLAY + ')';
+  });
+
+  // Restore debug overlay if it was enabled
+  restoreDebugState();
+}
+
+function persistSettings() {
+  clearTimeout(saveDebounce);
+  saveDebounce = setTimeout(() => api.saveSettings(settings), 300);
+}
+
+function saveKey(el) {
+  settings[el.dataset.key] = el.value;
+  if (el.dataset.key === 'cursorColor' && el.value.match(/^#[0-9a-fA-F]{3,8}$/)) {
+    document.getElementById('cursorColorPicker').value = el.value;
+    send('config:update', { cursorColor: el.value });
+  }
+  persistSettings();
+}
+
+// ── Shortcut capture ──────────────────────────────────────
+let capturingShortcutId = null;
+
+function captureShortcut(id) {
+  const kbd = document.getElementById('shortcut-' + id);
+  if (capturingShortcutId) {
+    // Cancel previous capture
+    const prev = document.getElementById('shortcut-' + capturingShortcutId);
+    if (prev) { prev.classList.remove('capturing'); prev.textContent = settings['shortcut_' + capturingShortcutId] || prev.textContent; }
+  }
+  capturingShortcutId = id;
+  kbd.classList.add('capturing');
+  kbd.textContent = 'Press keys...';
+}
+
+document.addEventListener('keydown', e => {
+  if (!capturingShortcutId) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const parts = [];
+  if (e.ctrlKey) parts.push('Ctrl');
+  if (e.altKey) parts.push('Alt');
+  if (e.metaKey) parts.push('Cmd');
+  if (e.shiftKey) parts.push('Shift');
+  const key = e.key;
+  if (!['Control','Alt','Meta','Shift'].includes(key)) {
+    // Normalize any whitespace character to "Space"
+    const normalizedKey = /^\s$/.test(key) ? 'Space' : key.length === 1 ? key.toUpperCase() : key;
+    parts.push(normalizedKey);
+    const combo = parts.join(' + ');
+    const kbd = document.getElementById('shortcut-' + capturingShortcutId);
+    kbd.textContent = combo;
+    kbd.classList.remove('capturing');
+    settings['shortcut_' + capturingShortcutId] = combo;
+    persistSettings();
+    // Notify main process so it can update the live key binding
+    if (capturingShortcutId === 'ptt') {
+      api.sendCommand('ptt-shortcut-updated', { shortcut: combo });
+    }
+    capturingShortcutId = null;
+  }
+}, true);
+
+function resetShortcut(id, defaultVal) {
+  document.getElementById('shortcut-' + id).textContent = defaultVal;
+  settings['shortcut_' + id] = defaultVal;
+  persistSettings();
+}
+
+function resetAllSettings() {
+  if (!confirm('Reset ALL settings to defaults? API keys will be kept. This cannot be undone.')) return;
+  const keys = { anthropicKey: settings.anthropicKey, openaiKey: settings.openaiKey, elevenlabsKey: settings.elevenlabsKey, cartesiaKey: settings.cartesiaKey, deepgramKey: settings.deepgramKey, assemblyaiKey: settings.assemblyaiKey };
+  settings = { ...keys };
+  persistSettings();
+  location.reload();
+}
+
+function resetAppearance() {
+  if (!confirm('Reset appearance settings to defaults?')) return;
+  ['cursorColor','cursorSize','glowIntensity','springResponse','springDamping','bubbleHold','displayScale','uiFont','monoFont'].forEach(k => delete settings[k]);
+  persistSettings();
+  location.reload();
+}
+
+function resetModels() {
+  if (!confirm('Reset all model selections to defaults?')) return;
+  ['chatProvider','chatModel','cuProvider','cuModel','fastProvider','fastModel','planProvider','planModel','toolProvider','toolModel'].forEach(k => delete settings[k]);
+  ['chatReasoningEnabled','chatReasoningBudget','cuReasoningEnabled','cuReasoningBudget','fastReasoningEnabled','planReasoningEnabled','toolReasoningEnabled'].forEach(k => delete settings[k]);
+  persistSettings();
+  location.reload();
+}
+
+// ── Sidebar drag reorder ──────────────────────────────────
+(function initSidebarDrag() {
+  const sidebar = document.querySelector('.sidebar');
+  let dragEl = null;
+  sidebar.addEventListener('dragstart', e => {
+    dragEl = e.target.closest('.tab-btn');
+    if (dragEl) dragEl.classList.add('dragging');
+  });
+  sidebar.addEventListener('dragend', e => {
+    if (dragEl) dragEl.classList.remove('dragging');
+    sidebar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('drag-over'));
+    dragEl = null;
+    // Save order
+    const order = Array.from(sidebar.querySelectorAll('.tab-btn')).map(b => b.dataset.tab);
+    settings.sidebarOrder = order;
+    persistSettings();
+  });
+  sidebar.addEventListener('dragover', e => {
+    e.preventDefault();
+    const target = e.target.closest('.tab-btn');
+    if (target && target !== dragEl) {
+      sidebar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('drag-over'));
+      target.classList.add('drag-over');
+    }
+  });
+  sidebar.addEventListener('drop', e => {
+    e.preventDefault();
+    const target = e.target.closest('.tab-btn');
+    if (target && target !== dragEl && dragEl) {
+      sidebar.insertBefore(dragEl, target);
+    }
+  });
+})();
+
+function toggleKeyVis(btn) {
+  const input = btn.parentElement.querySelector('input');
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.className = 'icon-eye';
+  } else {
+    input.type = 'password';
+    icon.className = 'icon-eye-off';
+  }
+}
+
+function syncColorPicker(hex) {
+  document.getElementById('cursorColor').value = hex;
+  settings.cursorColor = hex;
+  send('config:update', { cursorColor: hex });
+  persistSettings();
+}
+
+function saveSlider(key, val) {
+  settings[key] = parseFloat(val);
+  updateSliderDisplay(key, val);
+  persistSettings();
+  // Push appearance changes to the overlay in real-time
+  if (['cursorSize','glowIntensity','springResponse','springDamping','bubbleHold'].includes(key)) {
+    send('config:update', { [key]: parseFloat(val) });
+  }
+}
+
+function updateSliderDisplay(key, val) {
+  const el = document.getElementById(key + '-val');
+  if (!el) return;
+  if (key === 'ttsSpeed') el.textContent = parseFloat(val).toFixed(1) + '×';
+  else if (key === 'springResponse' || key === 'springDamping') el.textContent = parseFloat(val).toFixed(2);
+  else if (key === 'bubbleHold') el.textContent = parseFloat(val).toFixed(1) + 's';
+  else if (key === 'displayScale') el.textContent = val + '%';
+  else el.textContent = val;
+}
+
+function setDisplayScale(val) {
+  const pct = parseInt(val);
+  document.documentElement.style.fontSize = (13 * pct / 100) + 'px';
+  settings.displayScale = pct;
+  updateSliderDisplay('displayScale', pct);
+  persistSettings();
+}
+
+const SYSTEM_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+const SYSTEM_MONO = "'SF Mono', 'Fira Code', 'Cascadia Code', monospace";
+
+// ── Themes ─────────────────────────────────────────────────
+const THEMES = {
+  // Dark themes
+  default:    { name: 'Default',      mode: 'dark',  bg: 'rgba(16,18,17,0.97)',  surface: 'rgba(255,255,255,0.03)', border: 'rgba(59,130,246,0.12)',  accent: '#3b82f6', text: '#e2e8f0', dim: '#6B736F', cursor: '#3b82f6', swatch: '#101211' },
+  dracula:    { name: 'Dracula',       mode: 'dark',  bg: 'rgba(40,42,54,0.97)',  surface: 'rgba(255,255,255,0.04)', border: 'rgba(189,147,249,0.15)', accent: '#bd93f9', text: '#f8f8f2', dim: '#6272a4', cursor: '#bd93f9', swatch: '#282a36' },
+  nord:       { name: 'Nord',          mode: 'dark',  bg: 'rgba(46,52,64,0.97)',  surface: 'rgba(255,255,255,0.03)', border: 'rgba(136,192,208,0.12)', accent: '#88c0d0', text: '#eceff4', dim: '#4c566a', cursor: '#88c0d0', swatch: '#2e3440' },
+  oneDark:    { name: 'One Dark',      mode: 'dark',  bg: 'rgba(40,44,52,0.97)',  surface: 'rgba(255,255,255,0.03)', border: 'rgba(97,175,239,0.12)',  accent: '#61afef', text: '#abb2bf', dim: '#5c6370', cursor: '#61afef', swatch: '#282c34' },
+  catppuccin: { name: 'Catppuccin',    mode: 'dark',  bg: 'rgba(30,30,46,0.97)',  surface: 'rgba(255,255,255,0.03)', border: 'rgba(137,180,250,0.12)', accent: '#89b4fa', text: '#cdd6f4', dim: '#585b70', cursor: '#89b4fa', swatch: '#1e1e2e' },
+  gruvbox:    { name: 'Gruvbox',       mode: 'dark',  bg: 'rgba(40,40,40,0.97)',  surface: 'rgba(255,255,255,0.04)', border: 'rgba(215,153,33,0.15)',  accent: '#d79921', text: '#ebdbb2', dim: '#665c54', cursor: '#d79921', swatch: '#282828' },
+  solarized:  { name: 'Solarized',     mode: 'dark',  bg: 'rgba(0,43,54,0.97)',   surface: 'rgba(255,255,255,0.03)', border: 'rgba(38,139,210,0.12)',  accent: '#268bd2', text: '#839496', dim: '#586e75', cursor: '#268bd2', swatch: '#002b36' },
+  monokai:    { name: 'Monokai',       mode: 'dark',  bg: 'rgba(39,40,34,0.97)',  surface: 'rgba(255,255,255,0.04)', border: 'rgba(249,38,114,0.12)',  accent: '#f92672', text: '#f8f8f2', dim: '#75715e', cursor: '#f92672', swatch: '#272822' },
+  tokyoNight: { name: 'Tokyo Night',   mode: 'dark',  bg: 'rgba(26,27,38,0.97)',  surface: 'rgba(255,255,255,0.03)', border: 'rgba(122,162,247,0.12)', accent: '#7aa2f7', text: '#c0caf5', dim: '#565f89', cursor: '#7aa2f7', swatch: '#1a1b26' },
+  // Light themes
+  light:      { name: 'Light',         mode: 'light', bg: 'rgba(255,255,255,0.97)', surface: 'rgba(0,0,0,0.03)',    border: 'rgba(59,130,246,0.15)',  accent: '#2563eb', text: '#1e293b', dim: '#94a3b8', cursor: '#2563eb', swatch: '#ffffff' },
+  solarLight: { name: 'Solarized Lt',  mode: 'light', bg: 'rgba(253,246,227,0.97)', surface: 'rgba(0,0,0,0.03)',    border: 'rgba(38,139,210,0.15)',  accent: '#268bd2', text: '#657b83', dim: '#93a1a1', cursor: '#268bd2', swatch: '#fdf6e3' },
+  github:     { name: 'GitHub',        mode: 'light', bg: 'rgba(255,255,255,0.97)', surface: 'rgba(0,0,0,0.02)',    border: 'rgba(31,111,200,0.12)',  accent: '#1f6fc8', text: '#24292f', dim: '#8b949e', cursor: '#1f6fc8', swatch: '#ffffff' },
+};
+
+function buildThemeGrid() {
+  const grid = document.getElementById('theme-grid');
+  if (!grid) return;
+  const current = settings.theme || 'default';
+  grid.innerHTML = '';
+  for (const [id, t] of Object.entries(THEMES)) {
+    const card = document.createElement('div');
+    card.style.cssText = 'cursor:pointer;border-radius:8px;padding:6px 8px;border:1px solid ' + (id === current ? t.accent + '66' : 'rgba(255,255,255,0.06)') + ';background:' + (id === current ? t.accent + '15' : 'rgba(255,255,255,0.02)') + ';transition:all 0.15s;text-align:center';
+    card.innerHTML = '<div style="width:100%;height:18px;border-radius:4px;margin-bottom:4px;background:' + t.swatch + ';border:1px solid rgba(128,128,128,0.2)"></div>' +
+      '<div style="font-size:0.72rem;color:' + (id === current ? t.accent : '#ADB5B2') + ';font-weight:' + (id === current ? '600' : '400') + '">' + t.name + '</div>' +
+      '<div style="font-size:0.6rem;color:#4a524e;margin-top:1px">' + t.mode + '</div>';
+    card.onclick = () => applyTheme(id);
+    card.onmouseenter = () => { if (id !== (settings.theme||'default')) card.style.borderColor = t.accent + '44'; };
+    card.onmouseleave = () => { if (id !== (settings.theme||'default')) card.style.borderColor = 'rgba(255,255,255,0.06)'; };
+    grid.appendChild(card);
+  }
+}
+
+function applyTheme(id) {
+  const t = THEMES[id];
+  if (!t) return;
+  settings.theme = id;
+
+  const shell = document.querySelector('.shell');
+  const sidebar = document.querySelector('.sidebar');
+
+  // Shell
+  shell.style.background = t.bg;
+  shell.style.borderColor = t.border;
+
+  // CSS custom properties approach — update all themed elements
+  document.documentElement.style.setProperty('--cb-bg', t.bg);
+  document.documentElement.style.setProperty('--cb-surface', t.surface);
+  document.documentElement.style.setProperty('--cb-border', t.border);
+  document.documentElement.style.setProperty('--cb-accent', t.accent);
+  document.documentElement.style.setProperty('--cb-text', t.text);
+  document.documentElement.style.setProperty('--cb-dim', t.dim);
+
+  // Direct style updates for elements that use inline styles
+  document.body.style.color = t.text;
+  // Set CSS custom properties so tabs, title, and future elements auto-update
+  document.documentElement.style.setProperty('--accent', t.accent);
+  document.documentElement.style.setProperty('--accent-bg', t.accent + '22');
+  document.querySelectorAll('.section-label').forEach(el => el.style.color = t.dim);
+  document.querySelectorAll('.desc').forEach(el => el.style.color = t.dim);
+  document.querySelectorAll('.field-label .hint').forEach(el => el.style.color = t.dim);
+  document.querySelectorAll('.divider').forEach(el => el.style.background = t.border);
+
+  // Light mode adjustments
+  if (t.mode === 'light') {
+    document.querySelectorAll('input[type=text],input[type=password],select,textarea').forEach(el => {
+      el.style.background = 'rgba(0,0,0,0.04)';
+      el.style.borderColor = 'rgba(0,0,0,0.1)';
+      el.style.color = t.text;
+    });
+    document.querySelectorAll('.option-card,.cli-row').forEach(el => {
+      el.style.background = 'rgba(0,0,0,0.02)';
+      el.style.borderColor = 'rgba(0,0,0,0.06)';
+    });
+    document.querySelectorAll('button.btn,.chat-action-btn').forEach(el => {
+      el.style.background = 'rgba(0,0,0,0.04)';
+      el.style.borderColor = 'rgba(0,0,0,0.1)';
+      el.style.color = t.dim;
+    });
+    sidebar.style.borderColor = 'rgba(0,0,0,0.06)';
+  } else {
+    // Reset dark mode defaults
+    document.querySelectorAll('input[type=text],input[type=password],select,textarea').forEach(el => {
+      el.style.background = 'rgba(255,255,255,0.04)';
+      el.style.borderColor = 'rgba(255,255,255,0.08)';
+      el.style.color = t.text;
+    });
+    document.querySelectorAll('.option-card,.cli-row').forEach(el => {
+      el.style.background = 'rgba(255,255,255,0.02)';
+      el.style.borderColor = 'rgba(255,255,255,0.04)';
+    });
+    document.querySelectorAll('button.btn,.chat-action-btn').forEach(el => {
+      el.style.background = 'rgba(255,255,255,0.03)';
+      el.style.borderColor = 'rgba(255,255,255,0.1)';
+      el.style.color = '#ADB5B2';
+    });
+    sidebar.style.borderColor = 'rgba(255,255,255,0.04)';
+  }
+
+  // Update cursor color to match theme
+  settings.cursorColor = t.cursor;
+  document.getElementById('cursorColor').value = t.cursor;
+  document.getElementById('cursorColorPicker').value = t.cursor;
+  send('config:update', { cursorColor: t.cursor });
+
+  buildThemeGrid();
+  persistSettings();
+}
+
+function setUIFont(val) {
+  const font = val === 'system' ? SYSTEM_FONT : val;
+  // Apply to everything — body, inputs, selects, buttons, textareas
+  document.body.style.fontFamily = font;
+  document.querySelectorAll('select, input, textarea, button, .tab-btn, .btn, .option-card, .field-label, .section-label, .desc, h3, .shortcut-label, .cli-row').forEach(el => {
+    el.style.fontFamily = font;
+  });
+  document.getElementById('font-preview').style.fontFamily = font;
+  settings.uiFont = val;
+  send('config:update', { uiFont: val });
+  persistSettings();
+  loadGoogleFont(val);
+}
+
+function setMonoFont(val) {
+  const font = val === 'system' ? SYSTEM_MONO : val;
+  document.getElementById('mono-preview').style.fontFamily = font;
+  settings.monoFont = val;
+  send('config:update', { monoFont: val });
+  persistSettings();
+  loadGoogleFont(val);
+}
+
+const loadedFonts = new Set();
+function loadGoogleFont(fontVal) {
+  if (!fontVal || fontVal === 'system') return;
+  // Extract font family name from CSS value
+  const match = fontVal.match(/^'([^']+)'/);
+  if (!match) return;
+  const family = match[1];
+  if (loadedFonts.has(family)) return;
+  // Skip system fonts
+  const systemFonts = ['SF Mono','Menlo','Consolas','Cascadia Code'];
+  if (systemFonts.includes(family)) return;
+  loadedFonts.add(family);
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${family.replace(/ /g,'+')}:wght@400;500;600;700&display=swap`;
+  document.head.appendChild(link);
+}
+
+// ── Model system (provider→model dropdowns) ──────────────────
+const PROVIDERS = {
+  anthropic: { name:'Anthropic', models:['claude-sonnet-4-6','claude-opus-4-6','claude-haiku-3-5'] },
+  openai:    { name:'OpenAI',    models:['gpt-4o','gpt-4o-mini','o3','o4-mini'] },
+  ollama:    { name:'Ollama',    models:[] },
+  lmstudio:  { name:'LM Studio', models:[] },
+};
+const CU_PROVIDERS = {
+  anthropic: { name:'Anthropic', models:['claude-sonnet-4-6','claude-opus-4-6','claude-opus-4-5'] },
+  openai:    { name:'OpenAI',    models:['computer-use-preview'] },
+};
+const SLOTS = ['chat','cu','fast','plan','tool'];
+const BUDGET_LEVELS = [
+  { label:'Off', value:0 }, { label:'Low', value:1024 }, { label:'Medium', value:4096 },
+  { label:'High', value:16384 }, { label:'Max', value:32768 },
+];
+
+function buildAllModelSlots() {
+  SLOTS.forEach(s => { populateProviderDropdown(s); buildReasoningToggle(s); });
+}
+
+function populateProviderDropdown(slotId) {
+  const provSel = document.getElementById(slotId + '-provider');
+  if (!provSel) return;
+  const provMap = slotId === 'cu' ? CU_PROVIDERS : PROVIDERS;
+  const saved = settings[slotId + 'Provider'] || Object.keys(provMap)[0];
+  provSel.innerHTML = '';
+  for (const [pid, p] of Object.entries(provMap)) {
+    const opt = document.createElement('option');
+    opt.value = pid; opt.textContent = p.name;
+    if (pid === saved) opt.selected = true;
+    provSel.appendChild(opt);
+  }
+  populateModelDropdown(slotId, saved);
+}
+
+function populateModelDropdown(slotId, providerId) {
+  const modSel = document.getElementById(slotId + '-model');
+  if (!modSel) return;
+  const provMap = slotId === 'cu' ? CU_PROVIDERS : PROVIDERS;
+  const models = provMap[providerId]?.models || [];
+  const saved = settings[slotId + 'Model'];
+  modSel.innerHTML = '';
+  models.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    if (m === saved) opt.selected = true;
+    modSel.appendChild(opt);
+  });
+  if (!saved && models.length) settings[slotId + 'Model'] = models[0];
+}
+
+function slotProviderChanged(slotId) {
+  const pid = document.getElementById(slotId + '-provider').value;
+  settings[slotId + 'Provider'] = pid;
+  populateModelDropdown(slotId, pid);
+  persistSettings();
+}
+
+function slotModelChanged(slotId) {
+  settings[slotId + 'Model'] = document.getElementById(slotId + '-model').value;
+  persistSettings();
+}
+
+function saveCUResolution() { settings.cuResolution = document.getElementById('cu-resolution').value; persistSettings(); }
+
+function buildReasoningToggle(slotId) {
+  const el = document.getElementById(slotId + '-reasoning');
+  if (!el) return;
+  const enabled = settings[slotId + 'ReasoningEnabled'] || false;
+  const budget = settings[slotId + 'ReasoningBudget'] || 4096;
+  const idx = BUDGET_LEVELS.findIndex(b => b.value >= budget) || 2;
+  el.innerHTML = `<label><span class="toggle-switch"><input type="checkbox" ${enabled?'checked':''} onchange="toggleReasoning('${slotId}',this.checked)"><span class="toggle-track"></span></span> Extended thinking</label>
+    <span style="font-size:0.7rem;color:#4a524e">— lets the model reason before responding</span>
+    <div class="budget-row" id="${slotId}-budget-row" style="${enabled?'':'display:none'}">
+      <span style="font-size:0.75rem;color:#6B736F">Budget</span>
+      <input type="range" min="0" max="4" step="1" value="${idx}" oninput="setReasoningBudget('${slotId}',this.value)">
+      <span class="val" id="${slotId}-budget-val">${BUDGET_LEVELS[idx].label}</span>
+    </div>`;
+}
+
+function toggleReasoning(s, on) { settings[s+'ReasoningEnabled']=on; const r=document.getElementById(s+'-budget-row'); if(r)r.style.display=on?'flex':'none'; persistSettings(); }
+function setReasoningBudget(s, i) { const l=BUDGET_LEVELS[+i]; settings[s+'ReasoningBudget']=l.value; const e=document.getElementById(s+'-budget-val'); if(e)e.textContent=l.label; persistSettings(); }
+
+async function refreshLocalModels() {
+  const ou = settings.ollamaUrl || 'http://localhost:11434';
+  const lu = settings.lmstudioUrl || 'http://localhost:1234';
+  try { const r=await fetch(ou+'/api/tags'); const d=await r.json(); PROVIDERS.ollama.models=(d.models||[]).map(m=>m.name||m.model); } catch(_) { PROVIDERS.ollama.models=['(not running)']; }
+  try { const r=await fetch(lu+'/v1/models'); const d=await r.json(); PROVIDERS.lmstudio.models=(d.data||[]).map(m=>m.id); } catch(_) { PROVIDERS.lmstudio.models=['(not running)']; }
+  SLOTS.forEach(s => { if(s!=='cu') populateModelDropdown(s, document.getElementById(s+'-provider')?.value || 'anthropic'); });
+}
+
+// ── STT/TTS selection ─────────────────────────────────────
+function selectSTT(el) { selectOption(el, 'stt', 'sttProvider'); }
+function selectTTS(el) { selectOption(el, 'tts', 'ttsProvider'); }
+function selectSTTByValue(v) { document.querySelectorAll('[data-stt]').forEach(c => { if(c.dataset.stt===v) selectSTT(c); }); }
+function selectTTSByValue(v) { document.querySelectorAll('[data-tts]').forEach(c => { if(c.dataset.tts===v) selectTTS(c); }); }
+function selectOption(el, attr, settingsKey) {
+  el.parentElement.querySelectorAll('.option-card').forEach(c => {
+    c.classList.remove('selected');
+    c.querySelector('.check').style.display = 'none';
+  });
+  el.classList.add('selected');
+  el.querySelector('.check').style.display = '';
+  settings[settingsKey] = el.dataset[attr];
+  persistSettings();
+}
+
+// ── CLI verification ──────────────────────────────────────
+async function checkCLI(name, elId) {
+  const row = document.getElementById(elId);
+  const dot = row.querySelector('.dot');
+  const detail = row.querySelector('.cli-detail');
+  try {
+    const result = await api.verifyCLI(name);
+    if (result.found) {
+      dot.className = 'dot ok';
+      detail.textContent = result.path + (result.version ? ' · ' + result.version : '');
+    } else {
+      dot.className = 'dot missing';
+      detail.textContent = 'not found in PATH';
+    }
+  } catch(_) {
+    dot.className = 'dot missing';
+    detail.textContent = 'check failed';
+  }
+}
+
+// ── Screen bounds ─────────────────────────────────────────
+function updateScreenBounds(b) {
+  screenBounds = b;
+  document.getElementById('screen-info').textContent = b.width + '×' + b.height;
+}
+api.getScreenBounds().then(updateScreenBounds);
+api.onScreenBounds(updateScreenBounds);
+
+// ── Playground commands ───────────────────────────────────
+const PADDING = 120;
+function send(cmd, payload) { api.sendCommand(cmd, payload || {}); }
+function anchor(pos) {
+  const b=screenBounds,l=b.x+PADDING,r=b.x+b.width-PADDING,t=b.y+PADDING,bt=b.y+b.height-PADDING,mx=b.x+b.width/2,my=b.y+b.height/2;
+  return{center:{x:mx,y:my},'top-left':{x:l,y:t},'top-center':{x:mx,y:t},'top-right':{x:r,y:t},'center-left':{x:l,y:my},'center-right':{x:r,y:my},'bottom-left':{x:l,y:bt},'bottom-center':{x:mx,y:bt},'bottom-right':{x:r,y:bt}}[pos]||{x:mx,y:my};
+}
+function rndPt(){const b=screenBounds;return{x:b.x+PADDING+Math.random()*(b.width-PADDING*2),y:b.y+PADDING+Math.random()*(b.height-PADDING*2)};}
+
+function setVoice(s){
+  send('cursor:set-voice-state',{state:s});
+  document.getElementById('voice-state').textContent=s;
+  const debugVoice = document.getElementById('debug-voice');
+  if (debugVoice) debugVoice.textContent = 'voice: ' + s;
+  ['idle','listening','processing','responding'].forEach(v=>document.getElementById('btn-'+v)?.classList.toggle('active',v===s));
+}
+function toggleAudio(){
+  const btn=document.getElementById('btn-audio');
+  if(audioSimInterval){clearInterval(audioSimInterval);audioSimInterval=null;send('voice:audio-level',{level:0});btn.textContent='Start Audio Sim';btn.classList.remove('active');}
+  else{setVoice('listening');btn.textContent='Stop Audio Sim';btn.classList.add('active');audioSimInterval=setInterval(()=>{const l=Math.random()*0.7+Math.sin(Date.now()/200)*0.15;send('voice:audio-level',{level:Math.max(0,Math.min(1,l))});},50);}
+}
+const AL={center:'center','top-left':'top left','top-center':'top','top-right':'top right','center-left':'left','center-right':'right','bottom-left':'bottom left','bottom-center':'bottom','bottom-right':'bottom right'};
+function flyAnchor(p){const pt=anchor(p);send('cursor:fly-to',{x:pt.x,y:pt.y,label:AL[p]||p});}
+function flyRandom(){const pt=rndPt();const ls=['search bar','save button','settings','file menu','close tab'];send('cursor:fly-to',{x:pt.x,y:pt.y,label:ls[Math.floor(Math.random()*ls.length)]});}
+
+// ── Debug overlay ─────────────────────────────────────────
+let debugEnabled = false;
+let debugInterval = null;
+
+function toggleDebugOverlay() {
+  debugEnabled = !debugEnabled;
+  const btn = document.getElementById('btn-debug');
+  const bar = document.getElementById('debug-bar');
+  if (debugEnabled) {
+    btn.textContent = 'Disable Debug';
+    btn.classList.add('active');
+    bar.style.display = 'block';
+    settings.debugEnabled = true;
+    persistSettings();
+    // Poll at 4 Hz — fast enough to feel live, cheap enough to not burn CPU
+    debugInterval = setInterval(updateDebugBar, 250);
+    updateDebugBar();
+  } else {
+    btn.textContent = 'Enable Debug';
+    btn.classList.remove('active');
+    bar.style.display = 'none';
+    settings.debugEnabled = false;
+    persistSettings();
+    if (debugInterval) { clearInterval(debugInterval); debugInterval = null; }
+  }
+}
+
+async function updateDebugBar() {
+  if (!debugEnabled || !api.getDebugInfo) return;
+  try {
+    const info = await api.getDebugInfo();
+    document.getElementById('debug-cursor').textContent = 'cursor: ' + info.cursor.x + ', ' + info.cursor.y;
+    document.getElementById('debug-screen').textContent = 'screen: ' + info.screen.index + '/' + info.screen.total + ' (' + info.screen.width + '\u00d7' + info.screen.height + ' @' + info.screen.scale + 'x)';
+    document.getElementById('debug-app').textContent = 'app: ' + info.activeApp;
+  } catch (_) {}
+}
+
+// Restore debug state from settings (off by default)
+function restoreDebugState() {
+  if (!settings.debugEnabled) return;
+  debugEnabled = false; // toggleDebugOverlay will flip it
+  toggleDebugOverlay();
+}
+
+// ── Calibration ────────────────────────────────────────────
+// Shows a red crosshair TARGET at known screen coordinates,
+// then flies the cursor to where it THINKS that position is.
+// User moves their mouse to the red target and presses Enter.
+// The difference = the calibration error.
+
+let calPoints = [];
+let calPairs = [];
+let calStep = 0;
+
+function calStart() {
+  const b = screenBounds;
+  const pad = 200;
+  calPoints = [
+    { x: b.x + b.width/2, y: b.y + b.height/2, name: 'center' },
+    { x: b.x + pad, y: b.y + pad, name: 'top-left' },
+    { x: b.x + b.width - pad, y: b.y + pad, name: 'top-right' },
+    { x: b.x + pad, y: b.y + b.height - pad, name: 'bottom-left' },
+    { x: b.x + b.width - pad, y: b.y + b.height - pad, name: 'bottom-right' },
+  ];
+  calPairs = [];
+  calStep = 0;
+  document.getElementById('cal-start-btn').disabled = true;
+  document.getElementById('cal-start-btn').textContent = 'Calibrating...';
+  document.getElementById('cal-results').innerHTML = '';
+  calNext();
+}
+
+async function calNext() {
+  if (calStep >= calPoints.length) {
+    await api.hideCalTarget();
+    calFinish();
+    return;
+  }
+  const pt = calPoints[calStep];
+  const status = document.getElementById('cal-status');
+
+  // 1. Show the red crosshair target at the EXACT screen position
+  await api.showCalTarget(pt.x, pt.y);
+
+  // 2. Fly the buddy cursor to the same coordinates
+  send('cursor:fly-to', {
+    x: pt.x, y: pt.y,
+    label: pt.name,
+    bubbleText: `point ${calStep+1}/${calPoints.length}: move mouse to RED TARGET, press Enter`
+  });
+
+  status.innerHTML = `<b>Step ${calStep+1}/${calPoints.length}</b> (${pt.name}): A <span style="color:#ef4444">red crosshair</span> is on your screen. Move your mouse to the <span style="color:#ef4444">center of the red target</span>, then press <b>Enter</b>.`;
+  status.style.color = '#f59e0b';
+
+  const handler = async (e) => {
+    if (e.key !== 'Enter') return;
+    document.removeEventListener('keydown', handler, true);
+    const actual = await api.getCursorPosition();
+    calPairs.push({ target: pt, mouseAt: actual });
+    const dx = actual.x - Math.round(pt.x);
+    const dy = actual.y - Math.round(pt.y);
+    status.textContent = `Step ${calStep+1} recorded: target (${Math.round(pt.x)},${Math.round(pt.y)}) → mouse (${actual.x},${actual.y}) Δ(${dx},${dy})`;
+    calStep++;
+    setTimeout(calNext, 600);
+  };
+  document.addEventListener('keydown', handler, true);
+}
+
+function calFinish() {
+  document.getElementById('cal-start-btn').disabled = false;
+  document.getElementById('cal-start-btn').textContent = 'Start Calibration';
+  const status = document.getElementById('cal-status');
+  const results = document.getElementById('cal-results');
+
+  if (calPairs.length < 3) {
+    status.textContent = 'Not enough points. Try again.';
+    status.style.color = '#ef4444';
+    return;
+  }
+
+  // The TARGET was placed at exact screen coords by the main process.
+  // The USER moved their mouse to the target center.
+  // If mouse matches target exactly, no error.
+  // The BUDDY cursor flew to the same coords via our coordinate system.
+  // The error between target and where buddy went is in our rendering.
+  // But we measure mouse→target, not buddy→target, because the user
+  // is correcting for where the target ACTUALLY appeared vs where we asked.
+  //
+  // For now: the offset = average(mouse - target) tells us if our screen
+  // bounds or scaling are off. If all deltas are ~(30, -25) then we have
+  // a systematic offset.
+
+  let sumDx = 0, sumDy = 0;
+  for (const p of calPairs) {
+    sumDx += p.mouseAt.x - Math.round(p.target.x);
+    sumDy += p.mouseAt.y - Math.round(p.target.y);
+  }
+  const offsetX = Math.round(sumDx / calPairs.length);
+  const offsetY = Math.round(sumDy / calPairs.length);
+
+  // Scale from non-center points
+  const center = calPoints[0];
+  let sumSx = 0, sumSy = 0, sc = 0;
+  for (let i = 1; i < calPairs.length; i++) {
+    const dx_exp = calPairs[i].target.x - center.x;
+    const dy_exp = calPairs[i].target.y - center.y;
+    const dx_act = calPairs[i].mouseAt.x - calPairs[0].mouseAt.x;
+    const dy_act = calPairs[i].mouseAt.y - calPairs[0].mouseAt.y;
+    if (Math.abs(dx_exp) > 50) { sumSx += dx_act / dx_exp; sc++; }
+    if (Math.abs(dy_exp) > 50) { sumSy += dy_act / dy_exp; sc++; }
+  }
+  const scaleX = sc > 0 ? +(sumSx / (sc/2)).toFixed(4) : 1;
+  const scaleY = sc > 0 ? +(sumSy / (sc/2)).toFixed(4) : 1;
+
+  const cal = { offsetX, offsetY, scaleX, scaleY };
+  settings.calibration = cal;
+  persistSettings();
+  send('config:update', { calibration: cal });
+
+  status.textContent = 'Calibration complete!';
+  status.style.color = '#22c55e';
+  results.innerHTML =
+    `<b>Correction:</b> offset (${offsetX}, ${offsetY})px · scale (${scaleX}, ${scaleY})<br><br>` +
+    calPairs.map((p, i) =>
+      `#${i+1} ${calPoints[i].name}: target(${Math.round(p.target.x)},${Math.round(p.target.y)}) mouse(${p.mouseAt.x},${p.mouseAt.y}) Δ(${p.mouseAt.x-Math.round(p.target.x)},${p.mouseAt.y-Math.round(p.target.y)})`
+    ).join('<br>');
+}
+
+function calReset() {
+  delete settings.calibration;
+  persistSettings();
+  send('config:update', { calibration: null });
+  document.getElementById('cal-status').textContent = 'Calibration reset to defaults.';
+  document.getElementById('cal-status').style.color = '#60a5fa';
+  document.getElementById('cal-results').innerHTML = '';
+}
+function flyRandomBubble(){const pt=rndPt();const ps=["nice wallpaper","ooh what's this?","spotted something","check this out"];send('cursor:fly-to',{x:pt.x,y:pt.y,label:'demo',bubbleText:ps[Math.floor(Math.random()*ps.length)]});}
+
+// ── MCP Server + Client ─────────────────────────────────
+let mcpServerPort = null;
+
+async function mcpServerStart() {
+  const port = parseInt(document.getElementById('mcp-port').value) || 6274;
+  const result = await api.mcpServerStart(port);
+  if (result.ok) {
+    mcpServerPort = result.port;
+    document.getElementById('mcp-server-status').textContent = 'running on port ' + result.port;
+    document.getElementById('mcp-server-status').style.color = '#22c55e';
+    document.getElementById('mcp-server-url').textContent = 'SSE: http://127.0.0.1:' + result.port + '/sse';
+    updateMCPConfig();
+  } else {
+    document.getElementById('mcp-server-status').textContent = 'error: ' + result.error;
+    document.getElementById('mcp-server-status').style.color = '#ef4444';
+  }
+}
+
+async function mcpServerStop() {
+  await api.mcpServerStop();
+  mcpServerPort = null;
+  document.getElementById('mcp-server-status').textContent = 'stopped';
+  document.getElementById('mcp-server-status').style.color = '#f59e0b';
+  document.getElementById('mcp-server-url').textContent = 'Start to get the SSE endpoint URL.';
+  document.getElementById('mcp-claude-config').textContent = 'Start the server first';
+  document.getElementById('mcp-instructions').textContent = '';
+}
+
+async function mcpServerRefresh() {
+  const status = await api.mcpServerStatus();
+  if (status.running) {
+    mcpServerPort = status.port;
+    document.getElementById('mcp-server-status').textContent = 'running on port ' + status.port + (status.hasClient ? ' (client connected)' : '');
+    document.getElementById('mcp-server-status').style.color = '#22c55e';
+    document.getElementById('mcp-server-url').textContent = 'SSE: ' + status.sseUrl;
+    updateMCPConfig();
+  } else {
+    document.getElementById('mcp-server-status').textContent = 'stopped';
+    document.getElementById('mcp-server-status').style.color = '#f59e0b';
+  }
+}
+
+function getMCPConfigForFormat(format) {
+  if (!mcpServerPort) return { config: 'Start the server first', instructions: '' };
+  const url = 'http://127.0.0.1:' + mcpServerPort;
+  const sseUrl = url + '/sse';
+
+  switch (format) {
+    case 'claude':
+      return {
+        config: JSON.stringify({ mcpServers: { cursorbuddy: { type: 'sse', url: sseUrl } } }, null, 2),
+        instructions: 'Add to ~/.claude.json or .claude.json in your project root.\nClaude Code will auto-discover the tools on next launch.'
+      };
+    case 'cursor':
+      return {
+        config: JSON.stringify({ mcpServers: { cursorbuddy: { url: sseUrl, transport: 'sse' } } }, null, 2),
+        instructions: 'Add to .cursor/mcp.json in your project root.\nRestart Cursor to pick up the server.'
+      };
+    case 'codex':
+      return {
+        config: JSON.stringify({ mcp_servers: [{ name: 'cursorbuddy', type: 'sse', url: sseUrl }] }, null, 2),
+        instructions: 'Add to your Codex configuration.\nThe cursorbuddy tools will appear in the tool list.'
+      };
+    case 'windsurf':
+      return {
+        config: JSON.stringify({ mcpServers: { cursorbuddy: { serverUrl: sseUrl } } }, null, 2),
+        instructions: 'Add to your Windsurf MCP settings.\nReload the window to connect.'
+      };
+    case 'generic':
+    default:
+      return {
+        config: JSON.stringify({
+          name: 'cursorbuddy',
+          transport: { type: 'sse', url: sseUrl },
+          tools_endpoint: url + '/info',
+          direct_call: url + '/call',
+        }, null, 2),
+        instructions: 'SSE endpoint: ' + sseUrl + '\nDirect HTTP tool calls: POST ' + url + '/call\n  Body: { "tool": "cursor_fly_to", "args": { "x": 500, "y": 300, "label": "test" } }\n\nCLI: buddy fly center "hello"'
+      };
+  }
+}
+
+function updateMCPConfig() {
+  const format = document.getElementById('mcp-config-format').value;
+  const { config, instructions } = getMCPConfigForFormat(format);
+  document.getElementById('mcp-claude-config').textContent = config;
+  document.getElementById('mcp-instructions').textContent = instructions;
+}
+
+function copyMCPConfig() {
+  const text = document.getElementById('mcp-claude-config').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('mcp-copy-btn');
+    const orig = btn.textContent;
+    btn.textContent = '\u2713 Copied!';
+    btn.style.color = '#22c55e';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500);
+  }).catch(() => {});
+}
+
+async function mcpAddServer() {
+  const name = document.getElementById('mcp-add-name').value.trim();
+  const cmd = document.getElementById('mcp-add-cmd').value.trim();
+  if (!name || !cmd) return;
+  const parts = cmd.split(/\s+/);
+  const config = { name, command: parts[0], args: parts.slice(1) };
+  const result = await api.mcpConnect(config);
+  if (result.ok) {
+    // Save to settings for auto-reconnect on restart
+    if (!settings.mcpServers) settings.mcpServers = [];
+    // Replace if same name exists
+    settings.mcpServers = settings.mcpServers.filter(s => s.name !== name);
+    settings.mcpServers.push(config);
+    persistSettings();
+    document.getElementById('mcp-add-name').value = '';
+    document.getElementById('mcp-add-cmd').value = '';
+  } else {
+    alert('Connection failed: ' + result.error);
+  }
+  mcpRefreshLists();
+}
+
+async function mcpRefreshLists() {
+  // Connected servers
+  const servers = await api.mcpListServers();
+  const serverList = document.getElementById('mcp-servers-list');
+  if (servers.length === 0) {
+    serverList.innerHTML = '<span style="color:#4a524e;font-size:0.8rem">No servers connected.</span>';
+  } else {
+    serverList.innerHTML = servers.map(name =>
+      '<div class="cli-row"><div class="dot ok"></div><div class="info"><div class="cli-name">' + name + '</div></div>' +
+      '<button class="btn" style="flex:none;padding:2px 8px;font-size:0.7rem" onclick="mcpDisconnect(\'' + name + '\')">Disconnect</button></div>'
+    ).join('');
+  }
+  // Discovered tools
+  const tools = await api.mcpListTools();
+  const toolList = document.getElementById('mcp-tools-list');
+  if (tools.length === 0) {
+    toolList.innerHTML = '<span style="color:#4a524e">No tools discovered.</span>';
+  } else {
+    toolList.innerHTML = tools.map(t =>
+      '<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03)"><span style="color:#60a5fa">' + t.name + '</span> <span style="color:#4a524e">(' + (t.serverName||t.source||'') + ')</span><br><span style="color:#6B736F;font-size:0.75rem">' + (t.description||'') + '</span></div>'
+    ).join('');
+  }
+}
+
+async function mcpDisconnect(name) {
+  await api.mcpDisconnect(name);
+  // Remove from saved settings
+  if (settings.mcpServers) {
+    settings.mcpServers = settings.mcpServers.filter(s => s.name !== name);
+    persistSettings();
+  }
+  mcpRefreshLists();
+}
+
+// ── Screenshot Attachments ─────────────────────────────────
+let pendingAttachments = [];
+
+function addAttachment(data) {
+  pendingAttachments.push(data);
+  renderAttachments();
+}
+
+function removeAttachment(idx) {
+  pendingAttachments.splice(idx, 1);
+  renderAttachments();
+}
+
+function renderAttachments() {
+  const container = document.getElementById('chat-attachments');
+  if (pendingAttachments.length === 0) {
+    container.style.display = 'none';
+    container.innerHTML = '';
+    return;
+  }
+  container.style.display = 'flex';
+  container.innerHTML = pendingAttachments.map((a, i) =>
+    '<div style="position:relative;border-radius:8px;overflow:hidden;border:1px solid rgba(59,130,246,0.2)">' +
+    '<img src="' + a.thumbnailDataUrl + '" style="height:48px;display:block;border-radius:7px">' +
+    '<div style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,0.7);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="removeAttachment(' + i + ')">\u2715</div>' +
+    '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);font-size:8px;color:#ADB5B2;padding:1px 4px;text-align:center">' + a.width + '\u00d7' + a.height + '</div>' +
+    '</div>'
+  ).join('');
+}
+
+if (api.onScreenshotIntercepted) {
+  api.onScreenshotIntercepted(data => {
+    addAttachment(data);
+    const chatTab = document.querySelector('[data-tab="chat"]');
+    if (chatTab && !chatTab.classList.contains('active')) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+      chatTab.classList.add('active');
+      document.getElementById('page-chat').classList.add('active');
+    }
+  });
+}
+
+// ── Chat ──────────────────────────────────────────────────
+let chatStreaming = false;
+let chatStreamText = '';
+let chatIsVoiceInitiated = false; // true when mic started this exchange
+
+function clearChat() {
+  interruptCurrentResponse();
+  const placeholder = document.createElement('div');
+  placeholder.style.cssText = 'color:#3a413d;font-size:0.9rem;text-align:center;padding:40px 20px;line-height:1.6';
+  placeholder.className = 'chat-placeholder';
+  placeholder.textContent = 'Type a message or use push-to-talk';
+  document.getElementById('chat-messages').replaceChildren(placeholder);
+  chatStreaming = false;
+  chatStreamText = '';
+  liveBubbleEl = null;
+  lastInterruptedResponse = null;
+  pendingAttachments = [];
+  renderAttachments();
+  api.clearHistory();
+}
+
+function chatSend() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  // Interrupt anything in progress
+  interruptCurrentResponse();
+
+  // If we interrupted a response, prepend context so the AI knows
+  let transcript = text;
+  if (lastInterruptedResponse) {
+    const summary = lastInterruptedResponse.slice(0, 200);
+    transcript = `[the user interrupted your previous response which was: "${summary}${lastInterruptedResponse.length > 200 ? '...' : ''}" — if their new message is unrelated, answer it directly. if they seem to want you to continue, pick up where you left off and ask "shall I continue with..." to confirm]\n\n${text}`;
+    lastInterruptedResponse = null;
+  }
+
+  appendChatMsg('user', text);
+  chatStreaming = true;
+  chatStreamText = '';
+  appendChatMsg('assistant', '', true);
+  chatIsVoiceInitiated = false; // typed chat — don't animate cursor
+  // Include any pending screenshot attachments
+  const attachments = pendingAttachments.map(a => a.fullBase64);
+  pendingAttachments = [];
+  renderAttachments();
+  api.runInference({ transcript, attachments, voiceMode: chatIsVoiceInitiated });
+}
+
+function appendChatMsg(role, text, streaming) {
+  const c = document.getElementById('chat-messages');
+  if (c.children.length === 1 && c.children[0].style.textAlign === 'center') c.innerHTML = '';
+
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;padding:8px 0;' + (role==='user'?'flex-direction:row-reverse':'');
+
+  // Avatar
+  const av = document.createElement('div');
+  av.style.cssText = 'width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;margin-top:2px;';
+  if (role === 'user') {
+    av.style.background = 'rgba(59,130,246,0.2)'; av.style.color = '#60a5fa'; av.textContent = 'You';
+    av.style.fontSize = '8px'; av.style.fontWeight = '600';
+  } else if (role === 'system') {
+    av.style.background = 'rgba(239,68,68,0.15)'; av.style.color = '#f87171'; av.textContent = '!';
+  } else {
+    av.style.background = 'rgba(59,130,246,0.12)'; av.style.color = '#3b82f6';
+    av.innerHTML = '<i class="icon-bot" style="font-size:14px"></i>';
+  }
+
+  // Message body
+  const b = document.createElement('div');
+  b.style.cssText = 'flex:1;min-width:0;font-size:0.9rem;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:' + (role==='system'?'#fca5a5':'#e2e8f0') + ';padding-top:2px';
+  b.textContent = text;
+  if (streaming) b.id = 'chat-stream';
+
+  row.appendChild(av);
+  row.appendChild(b);
+  c.appendChild(row);
+  c.scrollTop = c.scrollHeight;
+}
+
+if (api.onInferenceChunk) {
+  api.onInferenceChunk(chunk => {
+    const el = document.getElementById('chat-stream');
+    if (chunk.type === 'text' && chunk.text) {
+      chatStreamText = chunk.text;
+      // Strip POINT tags from live display so user never sees them
+      if (el) el.textContent = chunk.text.replace(/\s*\[POINT:[^\]]*\]\s*/g, '').trim();
+      document.getElementById('chat-messages').scrollTop = 999999;
+    } else if (chunk.type === 'done') {
+      chatStreaming = false;
+      if (el) {
+        el.id = '';
+        // Strip ALL POINT tags from displayed text (including [POINT:none])
+        const cleaned = chatStreamText.replace(/\s*\[POINT:[^\]]*\]\s*/g, '').trim();
+        el.textContent = cleaned;
+      }
+      // Fly cursor only if AI is actually pointing at something
+      if (chunk.scaledPoint) {
+        send('cursor:fly-to', chunk.scaledPoint);
+      }
+
+      // Voice pipeline handles TTS sentence-by-sentence — don't double-speak.
+      // Only do panel-side TTS for text-initiated chats that have a POINT.
+      if (!chatIsVoiceInitiated && chunk.scaledPoint) {
+        const spokenText = el ? el.textContent : chatStreamText.replace(/\s*\[POINT:[^\]]*\]\s*/g, '').trim();
+        if (spokenText) {
+          api.speak(spokenText).then(result => {
+            if (result.ok && result.audioBase64) playAudioBase64(result.audioBase64, result.mimeType || 'audio/mpeg');
+          }).catch(() => {});
+        }
+      }
+    } else if (chunk.type === 'tool_use') {
+      const toolEl = document.createElement('div');
+      toolEl.style.cssText = 'margin:4px 0;font-size:0.8rem;color:#f59e0b;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.12);border-radius:8px;overflow:hidden;min-width:0;max-width:100%';
+      // Clickable header — collapsed by default
+      const headerRow = document.createElement('div');
+      headerRow.style.cssText = 'display:flex;gap:8px;align-items:center;padding:6px 10px;cursor:pointer;user-select:none';
+      const chevron = document.createElement('span');
+      chevron.style.cssText = 'font-size:10px;transition:transform 0.15s;display:inline-block';
+      chevron.className = 'tool-chevron';
+      chevron.textContent = '\u25B6';
+      headerRow.appendChild(chevron);
+      const icon = document.createElement('i');
+      icon.className = 'icon-wrench';
+      icon.style.fontSize = '13px';
+      headerRow.appendChild(icon);
+      const label = document.createElement('span');
+      const labelBold = document.createElement('b');
+      labelBold.textContent = chunk.name || 'tool';
+      label.appendChild(labelBold);
+      headerRow.appendChild(label);
+      toolEl.appendChild(headerRow);
+      // Collapsible body — hidden by default
+      const bodyEl = document.createElement('div');
+      bodyEl.style.cssText = 'display:none;padding:0 10px 8px';
+      if (chunk.input) {
+        const inputStr = typeof chunk.input === 'string' ? chunk.input : JSON.stringify(chunk.input, null, 2);
+        const inputEl = document.createElement('pre');
+        inputEl.style.cssText = 'color:#8B9590;font-size:0.72rem;margin:0;padding:6px 8px;background:rgba(0,0,0,0.2);border-radius:5px;font-family:"SF Mono","Fira Code",monospace;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;line-height:1.45';
+        inputEl.textContent = inputStr;
+        bodyEl.appendChild(inputEl);
+      }
+      toolEl.appendChild(bodyEl);
+      // Toggle expand/collapse on click
+      headerRow.addEventListener('click', () => {
+        const isOpen = bodyEl.style.display !== 'none';
+        bodyEl.style.display = isOpen ? 'none' : 'block';
+        chevron.style.transform = isOpen ? '' : 'rotate(90deg)';
+      });
+      // Store ref so tool_result can append into the same block
+      toolEl._bodyEl = bodyEl;
+      toolEl._chevron = chevron;
+      document.getElementById('chat-messages').appendChild(toolEl);
+      document.getElementById('chat-messages').scrollTop = 999999;
+    } else if (chunk.type === 'tool_result') {
+      // Append into the last tool_use block's collapsible body
+      const msgs = document.getElementById('chat-messages');
+      const lastToolEl = [...msgs.children].reverse().find(el => el._bodyEl);
+      const resEl = document.createElement('pre');
+      resEl.style.cssText = 'color:#ADB5B2;font-size:0.72rem;margin:4px 0 0 0;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:5px;font-family:"SF Mono","Fira Code",monospace;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;line-height:1.45';
+      resEl.textContent = (chunk.result||'').slice(0, 2000);
+      if (lastToolEl && lastToolEl._bodyEl) {
+        lastToolEl._bodyEl.appendChild(resEl);
+      } else {
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'padding:6px 10px;margin:0 0 6px 32px;font-size:0.77rem;color:#ADB5B2;background:rgba(255,255,255,0.02);border-left:2px solid rgba(245,158,11,0.25);border-radius:0 6px 6px 0';
+        wrapper.appendChild(resEl);
+        msgs.appendChild(wrapper);
+      }
+      setTimeout(() => { msgs.scrollTop = 999999; }, 50);
+    } else if (chunk.type === 'error') {
+      chatStreaming = false;
+      if (el) el.id = '';
+      appendChatMsg('system', 'Error: ' + (chunk.error||'unknown'));
+      if (chatIsVoiceInitiated) send('cursor:set-voice-state', { state: 'idle' });
+    }
+  });
+}
+
+const chatInputEl = document.getElementById('chat-input');
+chatInputEl?.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); chatSend(); }
+});
+// Auto-grow textarea as user types (Shift+Enter adds lines, up to max-height)
+chatInputEl?.addEventListener('input', () => {
+  chatInputEl.style.height = 'auto';
+  chatInputEl.style.height = Math.min(chatInputEl.scrollHeight, 120) + 'px';
+});
+
+// ── Rotating placeholder tips ────────────────────────────
+const TIPS = [
+  'Ask CursorBuddy anything\u2026',
+  'Try "open Safari" or "open github.com"',
+  'Toggle debug info in the Play tab',
+  'Add MCP servers for advanced tooling',
+  'Calibrate cursor accuracy in the Play tab',
+  PTT_DISPLAY + ' to push-to-talk',
+  'Ask "where is the search bar?"',
+  'CursorBuddy can see all your screens',
+  'Try "click the close button"',
+  'Change your voice in the Voice tab',
+  'Set different models for chat vs computer use',
+  'Attach a screenshot with the camera button',
+  'CursorBuddy remembers your conversation',
+  'Try "scroll down" or "press cmd+t"',
+  'Ask "what app is this?" about anything on screen',
+  'Say "open Terminal" to launch apps by name',
+  'The blue cursor can fly to things you ask about',
+  'Customise your shortcut in the Shortcuts tab',
+  'Debug mode may slow cursor animation \u2014 toggle in Play tab',
+  'Turn on debug to get telemetry from your screen (can affect performance)',
+];
+let tipIndex = Math.floor(Math.random() * TIPS.length);
+let tipInterval = null;
+
+function rotateTip() {
+  if (!chatInputEl || document.activeElement === chatInputEl) return;
+  tipIndex = (tipIndex + 1) % TIPS.length;
+  chatInputEl.placeholder = TIPS[tipIndex];
+}
+
+// Start rotating every 5 seconds
+tipInterval = setInterval(rotateTip, 5000);
+// Set initial random tip
+if (chatInputEl) chatInputEl.placeholder = TIPS[tipIndex];
+// Pause rotation while typing, restore on blur
+chatInputEl?.addEventListener('focus', () => {
+  chatInputEl.placeholder = 'Ask CursorBuddy\u2026';
+});
+chatInputEl?.addEventListener('blur', () => {
+  chatInputEl.placeholder = TIPS[tipIndex];
+});
+
+// ── Mic: permissions, device enum, audio capture, STT ─────
+let micRecording = false;
+let liveBubbleEl = null;
+let micStream = null;
+let audioContext = null;
+let scriptProcessor = null;
+
+async function enumerateMicDevices() {
+  const permStatus = document.getElementById('mic-permission-status');
+  try {
+    // Request permission first (triggers the prompt if not granted)
+    await navigator.mediaDevices.getUserMedia({ audio: true }).then(s => { s.getTracks().forEach(t => t.stop()); });
+    permStatus.textContent = '✓ Microphone access granted';
+    permStatus.style.color = '#22c55e';
+
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const mics = devices.filter(d => d.kind === 'audioinput');
+    const sel = document.getElementById('mic-device');
+    sel.innerHTML = '<option value="">Default microphone</option>';
+    mics.forEach(mic => {
+      const opt = document.createElement('option');
+      opt.value = mic.deviceId;
+      opt.textContent = mic.label || 'Microphone ' + (sel.options.length);
+      sel.appendChild(opt);
+    });
+    if (settings.micDeviceId) sel.value = settings.micDeviceId;
+  } catch(err) {
+    permStatus.textContent = '✗ Microphone access denied — check system permissions';
+    permStatus.style.color = '#ef4444';
+    document.getElementById('btn-mic').classList.add('no-permission');
+  }
+}
+
+function saveMicDevice() {
+  settings.micDeviceId = document.getElementById('mic-device').value;
+  persistSettings();
+}
+
+function saveVADEnabled() {
+  settings.vadEnabled = document.getElementById('vadEnabled').checked;
+  persistSettings();
+}
+
+async function startMicCapture() {
+  const constraints = { audio: settings.micDeviceId ? { deviceId: { exact: settings.micDeviceId } } : true };
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia(constraints);
+  } catch(err) {
+    document.getElementById('chat-transcript-hint').textContent = 'mic error';
+    document.getElementById('btn-mic').classList.add('no-permission');
+    return false;
+  }
+
+  audioContext = new AudioContext({ sampleRate: 16000 });
+  const source = audioContext.createMediaStreamSource(micStream);
+
+  // ScriptProcessor for PCM capture (AudioWorklet would be better but
+  // requires a separate file — this works cross-platform in Electron)
+  scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+  scriptProcessor.onaudioprocess = (e) => {
+    const float32 = e.inputBuffer.getChannelData(0);
+    // Convert Float32 to PCM16
+    const pcm16 = new Int16Array(float32.length);
+    for (let i = 0; i < float32.length; i++) {
+      pcm16[i] = Math.max(-32768, Math.min(32767, Math.round(float32[i] * 32767)));
+    }
+    // Send to main process for STT
+    api.sendAudio(pcm16.buffer);
+
+    // Audio level for waveform
+    let sum = 0;
+    for (let i = 0; i < float32.length; i++) sum += float32[i] * float32[i];
+    const rms = Math.sqrt(sum / float32.length);
+    const level = Math.min(Math.max(rms * 10, 0), 1);
+    send('voice:audio-level', { level });
+  };
+  source.connect(scriptProcessor);
+  scriptProcessor.connect(audioContext.destination);
+  return true;
+}
+
+function stopMicCapture() {
+  if (scriptProcessor) { scriptProcessor.disconnect(); scriptProcessor = null; }
+  if (audioContext) { audioContext.close().catch(()=>{}); audioContext = null; }
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  send('voice:audio-level', { level: 0 });
+}
+
+async function toggleMic() {
+  const btn = document.getElementById('btn-mic');
+  const status = document.getElementById('chat-transcript-hint');
+  const icon = document.getElementById('mic-icon');
+
+  if (micRecording) {
+    // ── Stop recording ────────────────────────────────
+    micRecording = false;
+    btn.classList.remove('recording');
+    btn.classList.add('processing');
+    icon.className = 'icon-loader';
+    status.textContent = 'processing…'; status.style.display = 'block';
+    send('cursor:set-voice-state', { state: 'processing' });
+
+    // Stop mic capture, request final transcript
+    stopMicCapture();
+    api.requestFinalTranscript();
+
+    // Wait briefly for final transcript, then stop STT
+    setTimeout(() => api.stopSTT(), 2500);
+
+    // Finalize the live bubble
+    if (liveBubbleEl) {
+      const finalText = liveBubbleEl.textContent.trim();
+      if (finalText && finalText !== 'listening…') {
+        liveBubbleEl.style.opacity = '1';
+        liveBubbleEl.style.fontStyle = 'normal';
+        liveBubbleEl = null;
+        // Send for inference (with interruption context if needed)
+        let transcript = finalText;
+        if (lastInterruptedResponse) {
+          const summary = lastInterruptedResponse.slice(0, 200);
+          transcript = `[the user interrupted your previous response which was: "${summary}${lastInterruptedResponse.length > 200 ? '...' : ''}" \u2014 if their new message is unrelated, answer it directly. if they seem to want you to continue, pick up where you left off]\n\n${finalText}`;
+          lastInterruptedResponse = null;
+        }
+        chatStreaming = true;
+        chatStreamText = '';
+        chatIsVoiceInitiated = true; // mic started this exchange
+        appendChatMsg('assistant', '', true);
+        api.runInference({ transcript, voiceMode: true });
+      } else {
+        // No transcript — remove the empty bubble
+        liveBubbleEl.parentElement?.remove();
+        liveBubbleEl = null;
+      }
+    }
+
+    setTimeout(() => {
+      if (!micRecording) {
+        btn.classList.remove('processing');
+        icon.className = 'icon-mic';
+        status.textContent = ''; status.style.display = 'none';
+      }
+    }, 1500);
+
+  } else {
+    // ── Start recording ───────────────────────────────
+    interruptCurrentResponse();
+    icon.className = 'icon-loader';
+    status.textContent = 'starting…'; status.style.display = 'block';
+
+    // Start STT session in main process
+    const sttResult = await api.startSTT(settings.sttProvider || 'assemblyai');
+    if (!sttResult.ok) {
+      status.textContent = sttResult.error || 'STT failed';
+      icon.className = 'icon-mic';
+      setTimeout(() => { status.textContent = ''; status.style.display = 'none'; }, 3000);
+      return;
+    }
+
+    // Start mic capture
+    const micOk = await startMicCapture();
+    if (!micOk) {
+      api.stopSTT();
+      icon.className = 'icon-mic';
+      return;
+    }
+
+    micRecording = true;
+    btn.classList.add('recording');
+    icon.className = 'icon-mic';
+    status.textContent = 'listening…'; status.style.display = 'block';
+    send('cursor:set-voice-state', { state: 'listening' });
+
+    // Switch to chat tab
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+    document.querySelector('[data-tab="chat"]').classList.add('active');
+    document.getElementById('page-chat').classList.add('active');
+
+    // Add live transcription bubble
+    const c = document.getElementById('chat-messages');
+    if (c.children.length === 1 && c.children[0].style?.textAlign === 'center') c.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;justify-content:flex-end;width:100%';
+    const b = document.createElement('div');
+    b.style.cssText = 'max-width:85%;padding:8px 12px;border-radius:12px 12px 4px 12px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.1);font-size:0.9rem;line-height:1.55;white-space:pre-wrap;word-break:break-word;opacity:0.6;font-style:italic';
+    b.textContent = 'listening…';
+    liveBubbleEl = b;
+    wrap.appendChild(b);
+    c.appendChild(wrap);
+    c.scrollTop = c.scrollHeight;
+  }
+}
+
+// ── Live transcript updates from STT ─────────────────────
+api.onTranscript(data => {
+  const status = document.getElementById('chat-transcript-hint');
+  const chinText = document.getElementById('chat-transcript-hint');
+  if (data.text && liveBubbleEl) {
+    liveBubbleEl.textContent = data.text;
+    document.getElementById('chat-messages').scrollTop = 999999;
+    status.textContent = 'hearing you…'; status.style.display = 'block';
+    chinText.textContent = data.text;
+    chinText.classList.add('active');
+  }
+  if (data.isFinal && data.text && micRecording) {
+    status.textContent = ''; status.style.display = 'none';
+    setTimeout(() => { chinText.textContent = ''; chinText.classList.remove('active'); }, 2000);
+    toggleMic(); // Auto-stop on final
+  }
+});
+
+api.onSTTError(msg => {
+  const status = document.getElementById('chat-transcript-hint');
+  status.textContent = msg;
+  status.style.color = '#ef4444';
+  setTimeout(() => { status.textContent = ''; status.style.display = 'none'; status.style.color = ''; }, 4000);
+});
+
+// ── Global PTT from main process ─────────────────────────
+// When the user presses the global hotkey, the main process starts the
+// STT session and tells us to start/stop mic capture so audio flows.
+if (api.onPushToTalk) {
+  api.onPushToTalk(async (action) => {
+    if (action === 'start' && !micRecording) {
+      // Start mic capture and feed audio to the main-process STT session
+      const micOk = await startMicCapture();
+      if (micOk) {
+        micRecording = true;
+        const btn = document.getElementById('btn-mic');
+        const icon = document.getElementById('mic-icon');
+        if (btn) btn.classList.add('recording');
+        if (icon) icon.className = 'icon-mic';
+        const status = document.getElementById('chat-transcript-hint');
+        if (status) { status.textContent = 'listening…'; status.style.display = 'block'; }
+
+        // Add live transcription bubble
+        interruptCurrentResponse();
+        const c = document.getElementById('chat-messages');
+        if (c.children.length === 1 && c.children[0].className === 'chat-placeholder') c.replaceChildren();
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex;justify-content:flex-end;width:100%';
+        const b = document.createElement('div');
+        b.style.cssText = 'max-width:85%;padding:8px 12px;border-radius:12px 12px 4px 12px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.1);font-size:0.9rem;line-height:1.55;white-space:pre-wrap;word-break:break-word;opacity:0.6;font-style:italic';
+        b.textContent = 'listening…';
+        liveBubbleEl = b;
+        wrap.appendChild(b);
+        c.appendChild(wrap);
+        c.scrollTop = c.scrollHeight;
+
+        chatIsVoiceInitiated = true;
+      }
+    } else if (action === 'stop' && micRecording) {
+      // Stop mic capture — main process already handles STT finalization
+      micRecording = false;
+      stopMicCapture();
+      const btn = document.getElementById('btn-mic');
+      const icon = document.getElementById('mic-icon');
+      if (btn) { btn.classList.remove('recording'); btn.classList.add('processing'); }
+      if (icon) icon.className = 'icon-loader';
+      const status = document.getElementById('chat-transcript-hint');
+      if (status) { status.textContent = 'processing…'; status.style.display = 'block'; }
+
+      // Finalize the live bubble
+      if (liveBubbleEl) {
+        const finalText = liveBubbleEl.textContent.trim();
+        if (finalText && finalText !== 'listening…') {
+          liveBubbleEl.style.opacity = '1';
+          liveBubbleEl.style.fontStyle = 'normal';
+          liveBubbleEl = null;
+          chatStreaming = true;
+          chatStreamText = '';
+          appendChatMsg('assistant', '', true);
+          api.runInference({ transcript: finalText, voiceMode: true });
+        } else {
+          liveBubbleEl.parentElement?.remove();
+          liveBubbleEl = null;
+        }
+      }
+
+      setTimeout(() => {
+        if (!micRecording) {
+          if (btn) btn.classList.remove('processing');
+          if (icon) icon.className = 'icon-mic';
+          if (status) { status.textContent = ''; status.style.display = 'none'; }
+        }
+      }, 1500);
+    }
+  });
+}
+
+// ── Screenshot capture button ──────────────────────────
+async function captureAndShow() {
+  const btn = document.getElementById('btn-attach');
+  btn.style.color = '#60a5fa';
+  const chinText = document.getElementById('chat-transcript-hint');
+  chinText.textContent = 'capturing…';
+  chinText.classList.add('active');
+  try {
+    const screens = await api.captureScreens();
+    chinText.textContent = screens.length + ' screen' + (screens.length > 1 ? 's' : '') + ' captured';
+    setTimeout(() => { chinText.textContent = ''; chinText.classList.remove('active'); }, 2000);
+  } catch(err) {
+    chinText.textContent = 'capture failed';
+    setTimeout(() => { chinText.textContent = ''; chinText.classList.remove('active'); }, 2000);
+  }
+  btn.style.color = '';
+}
+
+// ── Audio playback + interruption tracking ─────────────────
+let currentAudio = null;
+let lastInterruptedResponse = null;
+
+// Sequential audio queue for voice pipeline chunks
+const voiceAudioQueue = [];
+let voiceAudioPlaying = false;
+
+function playAudioBase64(base64, mimeType) {
+  stopCurrentAudio();
+  _playAudioImmediate(base64, mimeType);
+}
+
+function _playAudioImmediate(base64, mimeType) {
+  try {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    currentAudio = new Audio(url);
+    currentAudio.onended = () => { URL.revokeObjectURL(url); currentAudio = null; _playNextVoiceChunk(); };
+    currentAudio.play().catch(() => { _playNextVoiceChunk(); });
+  } catch(_) { _playNextVoiceChunk(); }
+}
+
+function queueVoiceAudio(base64, mimeType) {
+  voiceAudioQueue.push({ base64, mimeType });
+  if (!voiceAudioPlaying) _playNextVoiceChunk();
+}
+
+function _playNextVoiceChunk() {
+  if (voiceAudioQueue.length === 0) { voiceAudioPlaying = false; return; }
+  voiceAudioPlaying = true;
+  const chunk = voiceAudioQueue.shift();
+  _playAudioImmediate(chunk.base64, chunk.mimeType);
+}
+
+// Listen for voice audio chunks from the pipeline
+if (api.onVoiceAudioChunk) {
+  api.onVoiceAudioChunk(data => {
+    if (data.audioBase64) queueVoiceAudio(data.audioBase64, data.mimeType || 'audio/mpeg');
+  });
+}
+
+function stopCurrentAudio() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.src = '';
+    currentAudio = null;
+  }
+}
+
+/** Stop everything in flight — audio, streaming, STT, cursor state */
+function interruptCurrentResponse() {
+  // Save what was being said for "shall I continue" prompt
+  if (chatStreaming && chatStreamText.trim()) {
+    lastInterruptedResponse = chatStreamText.trim();
+  } else if (currentAudio && chatStreamText.trim()) {
+    lastInterruptedResponse = chatStreamText.trim();
+  } else {
+    lastInterruptedResponse = null;
+  }
+
+  stopCurrentAudio();
+  chatStreaming = false;
+
+  // Kill the streaming bubble if there is one
+  const streamEl = document.getElementById('chat-stream');
+  if (streamEl) streamEl.id = '';
+
+  send('cursor:set-voice-state', { state: 'idle' });
+}
+
+// ── Init ──────────────────────────────────────────────────
+loadAllSettings().then(() => {
+  refreshLocalModels();
+  checkCLI('claude', 'cli-claude');
+  checkCLI('codex', 'cli-codex');
+  checkCLI('ollama', 'cli-ollama');
+  checkCLI('lms', 'cli-lms');
+  enumerateMicDevices();
+  mcpRefreshLists();
+  mcpServerRefresh();
+  // Load VAD checkbox
+  if (settings.vadEnabled) document.getElementById('vadEnabled').checked = true;
+  // Load saved shortcuts
+  ['ptt','cursor','select'].forEach(id => {
+    if (settings['shortcut_' + id]) document.getElementById('shortcut-' + id).textContent = settings['shortcut_' + id];
+  });
+});
+</script>
+</body>
+</html>

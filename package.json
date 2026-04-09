@@ -1,0 +1,65 @@
+{
+  "name": "cursor-buddy",
+  "version": "0.1.0",
+  "private": false,
+  "license": "AGPL-3.0-only",
+  "description": "CursorBuddy — drop-in animated cursor companion for any web page or Electron app",
+  "main": "electron/main.js",
+  "module": "dist/cursor-buddy.es.js",
+  "unpkg": "dist/cursor-buddy.iife.js",
+  "jsdelivr": "dist/cursor-buddy.iife.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/cursor-buddy.es.js",
+      "require": "./dist/cursor-buddy.iife.js"
+    }
+  },
+  "files": [
+    "dist/cursor-buddy.iife.js",
+    "dist/cursor-buddy.iife.js.map",
+    "dist/cursor-buddy.es.js",
+    "dist/cursor-buddy.es.js.map",
+    "dist/index.d.ts"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "dev:electron": "vite & sleep 2 && electron .",
+    "build": "tsc && vite build",
+    "build:lib": "NODE_ENV=production vite build --config vite.lib.config.ts && tsc -p tsconfig.lib.json",
+    "test:web": "npm run build:lib && open http://localhost:3333/test.html && npx serve -p 3333 .",
+    "start": "electron .",
+    "preview": "vite preview"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.86.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "eventemitter3": "^5.0.1",
+    "openai": "^6.34.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "ws": "^8.20.0",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "electron": "^34.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.2"
+  }
+}

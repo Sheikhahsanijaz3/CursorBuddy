@@ -1,38 +1,5 @@
-# macOS
+node_modules/
+dist/
+out/
+*.tsbuildinfo
 .DS_Store
-.AppleDouble
-.LSOverride
-
-# Xcode
-xcuserdata/
-*.xcuserstate
-*.xccheckout
-*.moved-aside
-DerivedData/
-*.hmap
-*.ipa
-*.dSYM.zip
-*.dSYM
-
-# Swift Package Manager
-.build/
-.swiftpm/xcode/xcuserdata/
-.swiftpm/xcode/package.xcworkspace/xcuserdata/
-
-# Keep shared schemes for Xcode Cloud
-# .swiftpm/xcode/xcshareddata/ is tracked
-
-# Credentials / secrets
-.env
-*.pem
-*.key
-
-# Editor
-.idea/
-*.swp
-*.swo
-
-# Build artifacts
-*.dmg
-dmg_staging/
-pico.save

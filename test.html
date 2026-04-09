@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CursorBuddy — Local CDN Test</title>
+<style>
+  :root {
+    --bg: #0c0e12;
+    --surface: rgba(17, 20, 27, 0.85);
+    --border: rgba(59, 130, 246, 0.12);
+    --text: #e2e8f0;
+    --dim: #64748b;
+    --blue: #3b82f6;
+    --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --container: 700px;
+    --gutter: 24px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse 60% 40% at 30% 20%, rgba(59,130,246,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 70% 80%, rgba(139,92,246,0.05) 0%, transparent 50%);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: var(--gutter);
+    line-height: 1.6;
+  }
+
+  .container { max-width: var(--container); margin: 0 auto; width: 100%; }
+
+  h1 { font-size: clamp(22px, 5vw, 32px); font-weight: 700; margin-bottom: 6px; }
+  h1 .accent { color: var(--blue); }
+  .subtitle { color: var(--dim); font-size: clamp(12px, 2.5vw, 14px); margin-bottom: clamp(16px, 4vw, 32px); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: clamp(14px, 3vw, 20px);
+    margin-bottom: 12px;
+    backdrop-filter: blur(20px);
+  }
+  .card-title {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1.2px; color: var(--dim); margin-bottom: 10px;
+  }
+
+  /* ── Button layouts ────────────────────────────────────── */
+  .btn-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .btn-row {
+    display: flex; gap: 6px; margin-bottom: 6px;
+  }
+  .btn-row:last-child { margin-bottom: 0; }
+  .btn-row > button { flex: 1; min-width: 0; }
+
+  button {
+    font-family: inherit; font-size: clamp(11px, 2.2vw, 13px);
+    padding: clamp(7px, 1.5vw, 10px) clamp(8px, 2vw, 14px);
+    border-radius: 10px; border: 1px solid rgba(59,130,246,0.2);
+    background: rgba(59,130,246,0.08); color: #93c5fd;
+    cursor: pointer; transition: all 0.12s ease;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  button:hover { background: rgba(59,130,246,0.18); border-color: rgba(59,130,246,0.35); transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+  button.active { background: rgba(59,130,246,0.22); border-color: rgba(59,130,246,0.4); color: #fff; }
+  button.full { width: 100%; }
+  button.danger { border-color: rgba(244,63,94,0.2); background: rgba(244,63,94,0.08); color: #fda4af; }
+  button.danger:hover { background: rgba(244,63,94,0.18); border-color: rgba(244,63,94,0.35); }
+
+  /* ── Fake page content ─────────────────────────────────── */
+  .fake-content { margin-top: 20px; }
+  .fake-card {
+    background: rgba(30, 34, 42, 0.5);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 12px;
+    padding: clamp(12px, 2.5vw, 16px) clamp(14px, 3vw, 20px);
+    margin-bottom: 10px;
+  }
+  .fake-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .fake-card p { font-size: 13px; color: var(--dim); }
+  .fake-btn {
+    display: inline-block; padding: 6px 14px; border-radius: 8px; font-size: 12px;
+    background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.2);
+    color: #93c5fd; margin-top: 8px; cursor: pointer;
+  }
+
+  .status-bar {
+    font-family: var(--mono); font-size: clamp(10px, 2vw, 11px); color: var(--dim);
+    padding: 8px 12px; background: rgba(0,0,0,0.3); border-radius: 8px;
+    margin-bottom: 12px; overflow-x: auto;
+  }
+  .status-bar .val { color: var(--blue); }
+
+  pre {
+    font-family: var(--mono); font-size: clamp(10px, 2vw, 12px); color: var(--dim);
+    background: rgba(0,0,0,0.3); border-radius: 10px;
+    padding: clamp(10px, 2vw, 14px);
+    overflow-x: auto; line-height: 1.7;
+    border: 1px solid rgba(255,255,255,0.03);
+    -webkit-overflow-scrolling: touch;
+  }
+  pre .kw { color: #c084fc; }
+  pre .fn { color: #60a5fa; }
+  pre .str { color: #34d399; }
+  pre .cmt { color: #475569; }
+
+  #log {
+    margin-top: 16px; font-family: var(--mono);
+    font-size: 11px; color: var(--dim);
+    word-break: break-all;
+  }
+
+  /* ── Responsive: stack voice buttons 2×2 on small screens ── */
+  @media (max-width: 480px) {
+    :root { --gutter: 14px; }
+    .btn-row { flex-wrap: wrap; }
+    .btn-row > button { flex: 1 1 calc(50% - 3px); }
+    .btn-grid { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .card { border-radius: 12px; }
+    pre { font-size: 10px; padding: 10px; }
+  }
+
+  /* ── Touch devices: remove hover lift ──────────────────── */
+  @media (hover: none) {
+    button:hover { transform: none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1><span class="accent">CursorBuddy</span> — CDN Test</h1>
+  <p class="subtitle">Loaded via local &lt;script&gt; tag. The blue buddy should be following your cursor.</p>
+
+  <div class="status-bar">
+    viewport: <span class="val" id="vp-info">…</span> ·
+    state: <span class="val" id="state-info">idle</span>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Voice State</div>
+    <div class="btn-row">
+      <button class="active" id="vs-idle" onclick="setVS('idle')">Idle</button>
+      <button id="vs-listening" onclick="setVS('listening')">Listen</button>
+      <button id="vs-processing" onclick="setVS('processing')">Process</button>
+      <button id="vs-responding" onclick="setVS('responding')">Respond</button>
+    </div>
+    <div class="btn-row">
+      <button id="btn-audio" onclick="toggleAudio()" class="full">Start Audio Simulation</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Fly To — Anchors</div>
+    <div class="btn-grid">
+      <button onclick="fly('top-left')">↖ TL</button>
+      <button onclick="fly('top-center')">↑ Top</button>
+      <button onclick="fly('top-right')">↗ TR</button>
+      <button onclick="fly('center-left')">← Left</button>
+      <button onclick="fly('center')">● Center</button>
+      <button onclick="fly('center-right')">→ Right</button>
+      <button onclick="fly('bottom-left')">↙ BL</button>
+      <button onclick="fly('bottom-center')">↓ Bot</button>
+      <button onclick="fly('bottom-right')">↘ BR</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Fly To — Elements & Random</div>
+    <div class="btn-row">
+      <button onclick="buddy.flyToRandom()">Random</button>
+      <button onclick="buddy.flyToRandom('surprise', 'hello from here!')">Random + Bubble</button>
+    </div>
+    <div class="btn-row">
+      <button onclick="flyToSaveBtn()">Fly to "Save" ↓</button>
+      <button onclick="flyToCard()">Fly to card ↓</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Visibility</div>
+    <div class="btn-row">
+      <button onclick="buddy.show()">Show</button>
+      <button onclick="buddy.hide()">Hide</button>
+      <button class="danger" onclick="buddy.destroy()">Destroy</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Embed Code</div>
+    <pre><code><span class="cmt">&lt;!-- drop into any page --&gt;</span>
+&lt;script src=<span class="str">"cursor-buddy.iife.js"</span>&gt;&lt;/script&gt;
+&lt;script&gt;
+  <span class="kw">const</span> buddy = <span class="fn">CursorBuddy.init</span>();
+
+  buddy.<span class="fn">flyToAnchor</span>(<span class="str">'top-right'</span>, <span class="str">'settings'</span>);
+  buddy.<span class="fn">flyToElement</span>(el, <span class="str">'save'</span>);
+  buddy.<span class="fn">setVoiceState</span>(<span class="str">'listening'</span>);
+
+  buddy.<span class="fn">on</span>(<span class="str">'cursor:arrived'</span>, () =&gt; { });
+&lt;/script&gt;</code></pre>
+  </div>
+
+  <div class="fake-content">
+    <div class="fake-card" id="target-card">
+      <h3>Project Settings</h3>
+      <p>Configure your workspace preferences and team permissions.</p>
+      <span class="fake-btn" id="target-save-btn">💾 Save Changes</span>
+    </div>
+    <div class="fake-card">
+      <h3>Recent Activity</h3>
+      <p>3 commits pushed to main · 2 pull requests merged · 1 deployment succeeded</p>
+    </div>
+  </div>
+
+  <div id="log"></div>
+</div>
+
+<script src="dist/cursor-buddy.iife.js"></script>
+<script>
+  const buddy = CursorBuddy.init();
+
+  function updateVPInfo() {
+    const vp = buddy.getViewport();
+    document.getElementById('vp-info').textContent = vp.width + '×' + vp.height;
+  }
+  updateVPInfo();
+  window.addEventListener('resize', updateVPInfo);
+
+  function log(msg) {
+    const el = document.getElementById('log');
+    const line = document.createElement('div');
+    line.textContent = new Date().toLocaleTimeString() + ' · ' + msg;
+    el.prepend(line);
+    if (el.children.length > 8) el.lastChild.remove();
+  }
+  buddy.on('cursor:arrived', () => log('🎯 cursor:arrived'));
+  buddy.on('cursor:returned', () => log('↩️ cursor:returned'));
+
+  function setVS(state) {
+    buddy.setVoiceState(state);
+    document.getElementById('state-info').textContent = state;
+    ['idle','listening','processing','responding'].forEach(s =>
+      document.getElementById('vs-' + s)?.classList.toggle('active', s === state));
+    if (state !== 'listening') stopAudio();
+  }
+
+  let audioInterval = null;
+  function toggleAudio() {
+    const btn = document.getElementById('btn-audio');
+    if (audioInterval) {
+      stopAudio();
+    } else {
+      setVS('listening');
+      btn.textContent = 'Stop Audio Simulation';
+      btn.classList.add('active');
+      audioInterval = setInterval(() => {
+        const level = Math.random() * 0.7 + Math.sin(Date.now() / 200) * 0.15;
+        buddy.setAudioLevel(Math.max(0, Math.min(1, level)));
+      }, 50);
+    }
+  }
+  function stopAudio() {
+    const btn = document.getElementById('btn-audio');
+    if (audioInterval) { clearInterval(audioInterval); audioInterval = null; }
+    buddy.setAudioLevel(0);
+    btn.textContent = 'Start Audio Simulation';
+    btn.classList.remove('active');
+  }
+
+  function fly(anchor) {
+    buddy.flyToAnchor(anchor, anchor);
+    log('→ flyToAnchor("' + anchor + '")');
+  }
+
+  function flyToSaveBtn() {
+    buddy.flyToElement(document.getElementById('target-save-btn'), 'save button', 'click this to save!');
+    log('→ flyToElement(#target-save-btn)');
+  }
+  function flyToCard() {
+    buddy.flyToElement(document.getElementById('target-card'), 'project settings');
+    log('→ flyToElement(#target-card)');
+  }
+</script>
+</body>
+</html>

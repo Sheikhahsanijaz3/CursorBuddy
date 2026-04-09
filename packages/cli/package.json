@@ -1,0 +1,17 @@
+{
+  "name": "cursorbuddy-cli",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "description": "CLI for CursorBuddy — control the cursor companion from your terminal",
+  "bin": {
+    "buddy": "./dist/cli.js",
+    "cursorbuddy": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node src/cli.js"
+  },
+  "files": ["dist"],
+  "dependencies": {},
+  "devDependencies": {}
+}
