@@ -37,8 +37,11 @@ interface ElectronAPI {
   speak: (text: string) => Promise<{ ok: boolean; audioBase64?: string; mimeType?: string; error?: string }>;
 
   // Selection detection
-  onSelectionDetected?: (callback: (data: { text: string; source: string }) => void) => (() => void) | void;
+  onSelectionDetected?: (callback: (data: { text: string; source: string; bounds?: { x: number; y: number; width: number; height: number } | null; app?: string | null }) => void) => (() => void) | void;
+  onSelectionCleared?: (callback: () => void) => (() => void) | void;
   getSelectionSuggestions?: (text: string) => Promise<Array<{ action: string; label: string; prompt: string }>>;
+  triggerSelection?: (text: string) => void;
+  setSelectionEnabled?: (enabled: boolean) => void;
 }
 
 interface Window {

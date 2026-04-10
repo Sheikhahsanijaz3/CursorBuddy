@@ -837,13 +837,15 @@ async function loadAllSettings() {
   const selModelEl = document.getElementById('selectionModel');
   const selHotkeyEl = document.getElementById('selectionHotkey');
   const selAxEl = document.getElementById('selectionAccessibility');
-  if (selEnabledEl) selEnabledEl.checked = !!settings.selectionDetectionEnabled;
+  if (settings.selectionDetectionEnabled === undefined) settings.selectionDetectionEnabled = true;
+  if (settings.selectionAccessibilityEnabled === undefined) settings.selectionAccessibilityEnabled = true;
+  if (selEnabledEl) selEnabledEl.checked = settings.selectionDetectionEnabled !== false;
   if (selAutoEl) selAutoEl.checked = !!settings.selectionAutoSuggest;
   if (selProviderEl) selProviderEl.value = settings.selectionProvider || '';
   if (selModelEl) selModelEl.value = settings.selectionModel || '';
   if (selHotkeyEl) selHotkeyEl.value = settings.selectionHotkey || '';
   if (selAxEl) {
-    selAxEl.checked = !!settings.selectionAccessibilityEnabled;
+    selAxEl.checked = settings.selectionAccessibilityEnabled !== false;
     if (selAxEl.checked) checkAxPermission();
   }
 
@@ -902,7 +904,8 @@ function saveSelectionSetting() {
   settings.selectionModel = sel('selectionModel') ? sel('selectionModel').value : '';
   settings.selectionHotkey = sel('selectionHotkey') ? sel('selectionHotkey').value : '';
   settings.selectionAccessibilityEnabled = sel('selectionAccessibility') ? sel('selectionAccessibility').checked : false;
-  persistSettings();
+  api.saveSettings(settings);
+  if (api.setSelectionEnabled) api.setSelectionEnabled(settings.selectionDetectionEnabled);
 }
 
 function saveKey(el) {
@@ -2262,6 +2265,67 @@ function appendChatMsg(role, text, streaming) {
   c.scrollTop = c.scrollHeight;
 }
 
+let lastSelectionCaptureKey = '';
+let lastSelectionCaptureAt = 0;
+
+function appendSelectionCapture(text, source, app) {
+  const cleanText = String(text || '').trim();
+  if (!cleanText) return;
+
+  const key = `${source || 'selection'}:${app || ''}:${cleanText}`;
+  const now = Date.now();
+  if (key === lastSelectionCaptureKey && now - lastSelectionCaptureAt < 1500) return;
+  lastSelectionCaptureKey = key;
+  lastSelectionCaptureAt = now;
+
+  openTab('chat');
+  const c = document.getElementById('chat-messages');
+  clearChatStartupUi(true);
+
+  const row = document.createElement('div');
+  row.dataset.chatRole = 'selection';
+  row.style.cssText = 'display:flex;justify-content:flex-start;width:100%;padding:4px 0 6px';
+
+  const container = document.createElement('div');
+  container.style.cssText = 'max-width:92%;display:flex;flex-direction:column;gap:6px';
+
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.setAttribute('aria-expanded', 'false');
+  chip.style.cssText = 'display:inline-flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:7px 10px;border-radius:999px;border:1px solid rgba(59,130,246,0.18);background:rgba(59,130,246,0.08);color:#93c5fd;font-size:0.72rem;font-weight:600;line-height:1;letter-spacing:0.35px;text-transform:uppercase;cursor:pointer';
+
+  const chevron = document.createElement('span');
+  chevron.textContent = '▸';
+  chevron.style.cssText = 'font-size:10px;transition:transform 0.15s ease';
+
+  const kind = cleanText.includes('\n') || cleanText.length > 80 ? 'TEXT' : 'TEXT';
+  const sourceTag = String(source || 'selection').toUpperCase();
+  chip.appendChild(chevron);
+  chip.appendChild(document.createTextNode(`${sourceTag} - ${kind}`));
+
+  const meta = document.createElement('div');
+  meta.style.cssText = 'font-size:0.68rem;color:#7dd3fc;opacity:0.9';
+  meta.textContent = app ? app : 'selection captured';
+  chip.appendChild(meta);
+
+  const content = document.createElement('div');
+  content.style.cssText = 'display:none;padding:10px 12px;border-radius:12px;border:1px solid rgba(59,130,246,0.14);background:rgba(255,255,255,0.03);color:#dbeafe;font-size:0.8rem;line-height:1.55;white-space:pre-wrap;word-break:break-word';
+  content.textContent = cleanText;
+
+  chip.addEventListener('click', () => {
+    const expanded = chip.getAttribute('aria-expanded') === 'true';
+    chip.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    chevron.style.transform = expanded ? 'rotate(0deg)' : 'rotate(90deg)';
+    content.style.display = expanded ? 'none' : 'block';
+  });
+
+  container.appendChild(chip);
+  container.appendChild(content);
+  row.appendChild(container);
+  c.appendChild(row);
+  c.scrollTop = c.scrollHeight;
+}
+
 function formatThinkingDuration(durationMs) {
   const seconds = Math.max(durationMs, 100) / 1000;
   return seconds < 10 ? seconds.toFixed(1) + 's' : Math.round(seconds) + 's';
@@ -2305,6 +2369,12 @@ function finalizeThinkingChip(messageEl) {
   chip.dataset.startedAt = '';
   setThinkingChipState(chip, false);
   return chip;
+}
+
+if (api.onSelectionDetected) {
+  api.onSelectionDetected((data) => {
+    appendSelectionCapture(data.text, data.source, data.app);
+  });
 }
 
 if (api.onInferenceChunk) {

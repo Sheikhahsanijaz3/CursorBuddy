@@ -29,9 +29,9 @@ let debounceTimer = null;
 function init(broadcast) {
   broadcastFn = broadcast;
   const settings = loadSettings();
-  // Default OFF on first run — user must explicitly enable in settings
-  isEnabled = !!settings.selectionDetectionEnabled;
-  
+  // Default ON unless the user explicitly disabled it.
+  isEnabled = settings.selectionDetectionEnabled !== false;
+
   if (isEnabled) start();
 }
 
@@ -52,9 +52,17 @@ function stop() {
 }
 
 function setEnabled(enabled) {
-  isEnabled = enabled;
-  if (enabled) start();
-  else stop();
+  const nextEnabled = !!enabled;
+  if (!nextEnabled) {
+    isEnabled = false;
+    stop();
+    return;
+  }
+
+  // Restart so clipboard watcher, AX helper, and hotkey all pick up latest settings.
+  if (isEnabled) stop();
+  isEnabled = true;
+  start();
 }
 
 // ── Clipboard Watching ──────────────────────────────────────
@@ -100,9 +108,11 @@ function requestAccessibilityPermission() {
 function startAccessibilityHelper() {
   if (process.platform !== 'darwin') return;
   
+  if (axProcess) return;
+
   const settings = loadSettings();
-  if (!settings.selectionAccessibilityEnabled) return;
-  
+  if (settings.selectionAccessibilityEnabled === false) return;
+
   if (!checkAccessibilityPermission()) {
     log.event('selection:ax-needs-permission');
     requestAccessibilityPermission();

@@ -11,6 +11,7 @@
 
 const { app, BrowserWindow, Tray, Menu, screen, ipcMain, nativeImage, globalShortcut, clipboard, session } = require("electron");
 const path = require("path");
+const { createHash } = require("crypto");
 const { execFile } = require("child_process");
 const { captureAllScreens, screenshotPointToScreenCoords, setCalibration } = require("./services/capture.js");
 const { runInference, runComputerUse, clearHistory } = require("./services/inference.js");
@@ -863,11 +864,14 @@ let lastClipboardHash = null;
 function startScreenshotInterceptor() {
   setInterval(() => {
     const img = clipboard.readImage();
-    if (img.isEmpty()) return;
+    if (img.isEmpty()) {
+      lastClipboardHash = null;
+      return;
+    }
 
-    // Use size as a cheap hash instead of comparing multi-MB data URLs
     const size = img.getSize();
-    const hash = `${size.width}x${size.height}`;
+    const pngBuffer = img.toPNG();
+    const hash = createHash("sha1").update(pngBuffer).digest("hex");
     if (hash === lastClipboardHash) return;
     lastClipboardHash = hash;
 

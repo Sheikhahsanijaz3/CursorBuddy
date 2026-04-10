@@ -77,6 +77,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on('selection:text-detected', handler);
     return () => ipcRenderer.removeListener('selection:text-detected', handler);
   },
+  onSelectionCleared: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('selection:cleared', handler);
+    return () => ipcRenderer.removeListener('selection:cleared', handler);
+  },
   getSelectionSuggestions: (text) => ipcRenderer.invoke('selection:get-suggestions', text),
   triggerSelection: (text) => ipcRenderer.send('selection:trigger', text),
   setSelectionEnabled: (enabled) => ipcRenderer.send('selection:set-enabled', enabled),

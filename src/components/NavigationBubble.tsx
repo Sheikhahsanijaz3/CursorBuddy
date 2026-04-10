@@ -19,7 +19,8 @@ export const NavigationBubble: React.FC = () => {
   const bubbleScale = useCursorStore((s) => s.navigationBubbleScale);
 
   const isVisible =
-    navigationMode === "pointing-at-target" && bubbleText.length > 0;
+    bubbleText.length > 0 &&
+    (navigationMode === "pointing-at-target" || bubbleOpacity > 0.01);
 
   useRuntimeConfig();
   const color = runtimeConfig.cursorColor;
