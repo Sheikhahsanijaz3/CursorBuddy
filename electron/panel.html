@@ -8,7 +8,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent}
-html{font-size:13px}
+html{font-size:15.6px}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:1rem;color:#ECEEED;user-select:none;-webkit-user-select:none}
 
 /* ── Shell ─────────────────────────────────────────── */
@@ -22,13 +22,37 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;f
 .composer-btn{width:30px;height:30px;border-radius:8px;border:none;background:transparent;color:#6B736F;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.12s}
 .composer-btn:hover{background:rgba(255,255,255,0.06);color:#ADB5B2}
 .composer-btn i{font-size:15px}
+.composer-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .composer-btn.recording{color:#f87171;animation:mic-pulse 1.5s ease infinite}
 .composer-btn.recording i{animation:mic-throb 0.8s ease infinite}
 .composer-btn.processing{animation:mic-spin-border 1.2s linear infinite}
-.composer-send{width:32px;height:32px;border-radius:10px;border:none;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.composer-send{width:34px;height:34px;border-radius:999px;border:none;background:var(--accent,#3b82f6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
 .composer-send:hover{filter:brightness(0.85);transform:scale(1.05)}
 .composer-send:disabled{background:#2a2d30;color:#4a524e;cursor:default;transform:none}
 .composer-send i{font-size:16px}
+.drop-overlay{position:absolute;inset:6px;border-radius:24px;border:1px dashed rgba(59,130,246,0.45);background:rgba(59,130,246,0.08);display:none;align-items:stretch;justify-content:stretch;pointer-events:none;z-index:999;color:#bfdbfe;font-size:0.95rem;font-weight:500;letter-spacing:0.2px;backdrop-filter:blur(4px);padding:10px}
+.drop-overlay.visible{display:flex}
+.drop-overlay-inner{display:grid;grid-template-columns:1fr;gap:10px;flex:1;min-height:0}
+.drop-overlay.folder-mode .drop-overlay-inner{grid-template-columns:1fr 1fr}
+.drop-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border-radius:18px;border:1px solid rgba(148,163,184,0.2);background:rgba(15,23,42,0.38);color:#cbd5e1;text-align:center;padding:18px;transition:all 0.12s}
+.drop-zone.active{border-color:rgba(96,165,250,0.85);background:rgba(30,64,175,0.28);color:#eff6ff;box-shadow:inset 0 0 0 1px rgba(147,197,253,0.2)}
+.drop-zone-title{font-size:0.98rem;font-weight:700}
+.drop-zone-subtitle{font-size:0.76rem;line-height:1.45;color:#bfdbfe;max-width:220px}
+.onboarding-card{border:1px solid rgba(59,130,246,0.12);background:rgba(255,255,255,0.03);border-radius:16px;padding:12px;overflow:hidden}
+.onboarding-bubble{max-width:92%;padding:10px 14px;border-radius:16px 16px 16px 6px;background:rgba(255,255,255,0.04);border:1px solid rgba(59,130,246,0.1);font-size:0.95rem;line-height:1.6;color:#e2e8f0;min-height:74px;display:flex;align-items:center}
+.onboarding-art{position:relative;height:158px;border-radius:14px;border:1px solid rgba(59,130,246,0.16);background:linear-gradient(135deg, rgba(59,130,246,0.18), rgba(15,23,42,0.28));display:flex;align-items:center;justify-content:center;overflow:hidden}
+.onboarding-art::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 20%, rgba(125,211,252,0.25), transparent 34%),radial-gradient(circle at 80% 30%, rgba(59,130,246,0.22), transparent 30%),radial-gradient(circle at 50% 100%, rgba(255,255,255,0.08), transparent 42%)}
+.onboarding-art-label{position:relative;z-index:1;padding:0 18px;text-align:center;color:#dbeafe;font-size:0.82rem;line-height:1.5;max-width:280px;min-height:88px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.onboarding-art-badge{position:absolute;top:10px;left:10px;z-index:1;padding:4px 8px;border-radius:999px;background:rgba(15,23,42,0.55);border:1px solid rgba(148,163,184,0.25);font-size:0.68rem;color:#bfdbfe;letter-spacing:0.3px;text-transform:uppercase}
+.onboarding-art-avatar{position:absolute;right:10px;bottom:10px;width:52px;height:52px;border-radius:16px;background:rgba(15,23,42,0.55);border:1px solid rgba(148,163,184,0.18);padding:6px;backdrop-filter:blur(8px)}
+.onboarding-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.onboarding-step-nav{display:flex;align-items:center;gap:10px}
+.onboarding-step{font-size:0.75rem;color:#94a3b8;min-width:52px}
+.onboarding-btn{border:none;border-radius:999px;padding:8px 14px;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.12s}
+.onboarding-btn.secondary{background:rgba(255,255,255,0.05);color:#94a3b8}
+.onboarding-btn.primary{background:var(--accent,#3b82f6);color:white}
+.onboarding-btn.nav{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.onboarding-btn[disabled]{opacity:0.4;cursor:default}
 
 /* Keep old class for back-compat with mic state toggling */
 .chat-action-btn{display:none}
@@ -69,9 +93,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;f
 @keyframes mic-spin-border{0%{border-color:rgba(59,130,246,0.5) rgba(59,130,246,0.15) rgba(59,130,246,0.15) rgba(59,130,246,0.15)}25%{border-color:rgba(59,130,246,0.15) rgba(59,130,246,0.5) rgba(59,130,246,0.15) rgba(59,130,246,0.15)}50%{border-color:rgba(59,130,246,0.15) rgba(59,130,246,0.15) rgba(59,130,246,0.5) rgba(59,130,246,0.15)}75%{border-color:rgba(59,130,246,0.15) rgba(59,130,246,0.15) rgba(59,130,246,0.15) rgba(59,130,246,0.5)}}
 
 /* ── Titlebar ──────────────────────────────────────── */
-.titlebar{display:flex;align-items:center;padding:0.75rem 1rem 0;-webkit-app-region:drag;app-region:drag;flex-shrink:0}
-.titlebar-text{flex:1;font-size:1rem;font-weight:600;color:var(--accent,#3b82f6)}
-.titlebar-close{width:1.8rem;height:1.8rem;border-radius:0.6rem;border:none;background:transparent;color:#6B736F;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-app-region:no-drag;app-region:no-drag}
+.titlebar{display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0.5rem 0;-webkit-app-region:drag;app-region:drag;flex-shrink:0}
+.titlebar-spacer{flex:1;min-width:0;min-height:32px}
+.titlebar-action{width:32px;height:32px;border-radius:999px;border:none;background:transparent;color:#8b949e;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-app-region:no-drag;app-region:no-drag;transition:all 0.12s}
+.titlebar-action:hover{background:rgba(255,255,255,0.06);color:#ECEEED}
+.titlebar-action svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.titlebar-close{background:rgba(255,255,255,0.06);font-size:0.9rem}
 .titlebar-close:hover{background:rgba(244,63,94,0.15);color:#f43f5e}
 
 /* ── Layout: sidebar + content ─────────────────────── */
@@ -160,9 +187,27 @@ button.btn.active{background:var(--accent-bg,rgba(59,130,246,0.18));border-color
 </head>
 <body>
 <div class="shell">
+  <div class="drop-overlay" id="drop-overlay">
+    <div class="drop-overlay-inner">
+      <div class="drop-zone active" id="drop-zone-attach">
+        <div class="drop-zone-title">Attach to chat</div>
+        <div class="drop-zone-subtitle" id="drop-zone-attach-subtitle">Drop images or text files to attach</div>
+      </div>
+      <div class="drop-zone" id="drop-zone-workspace" style="display:none">
+        <div class="drop-zone-title">Set working folder</div>
+        <div class="drop-zone-subtitle" id="drop-zone-workspace-subtitle">Drop a folder here to use it as the working directory</div>
+      </div>
+    </div>
+  </div>
   <div class="titlebar">
-    <div class="titlebar-text">CursorBuddy <span style="font-size:0.65rem;color:#4a524e;font-weight:400;margin-left:4px">v0.1.0</span></div>
-    <button class="titlebar-close" onclick="panelAPI.hidePanel()" title="Close">✕</button>
+    <button class="titlebar-action titlebar-close" onclick="panelAPI.hidePanel()" title="Close" aria-label="Close">✕</button>
+    <div class="titlebar-spacer"></div>
+    <button class="titlebar-action" onclick="startNewThread()" title="New thread" aria-label="New thread">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h10a4 4 0 0 0 4-4v-5"></path>
+        <path d="M16.5 4.5a2.12 2.12 0 1 1 3 3L11 16l-4 1 1-4 8.5-8.5Z"></path>
+      </svg>
+    </button>
   </div>
 
   <div class="layout">
@@ -199,14 +244,18 @@ button.btn.active{background:var(--accent-bg,rgba(59,130,246,0.18));border-color
           <div class="composer">
             <!-- Attachments row inside the composer box -->
             <div id="chat-attachments" style="display:none;padding:0 0 6px;display:flex;gap:6px;flex-wrap:wrap"></div>
+            <input id="chat-file-input" type="file" multiple accept="image/*,.txt,.md,.markdown,.json,.js,.jsx,.ts,.tsx,.css,.html,.xml,.csv,.log,.yml,.yaml,.py,.rb,.go,.rs,.java,.c,.cc,.cpp,.h,.hpp,.sh" style="display:none">
             <!-- Textarea -->
             <textarea id="chat-input" rows="3" placeholder="Ask CursorBuddy…"></textarea>
             <!-- Bottom toolbar -->
             <div class="composer-toolbar">
               <div class="composer-actions">
-                <button class="composer-btn" id="btn-attach" onclick="captureAndShow()" title="Screenshot"><i class="icon-image"></i></button>
+                <button class="composer-btn" id="btn-attach" onclick="openAttachmentPicker()" title="Attach files">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M21.44 11.05 12.25 20.24a6 6 0 1 1-8.49-8.49l9.2-9.19a4 4 0 1 1 5.65 5.65l-9.2 9.2a2 2 0 0 1-2.82-2.83l8.48-8.48"></path>
+                  </svg>
+                </button>
                 <button class="composer-btn" id="btn-mic" onclick="toggleMic()" title="Push to talk"><i class="icon-mic" id="mic-icon"></i></button>
-                <button class="composer-btn" id="btn-clear" onclick="clearChat()" title="Clear"><i class="icon-trash-2"></i></button>
               </div>
               <button class="composer-send" id="chat-send" onclick="chatSend()" title="Send (Enter)"><i class="icon-arrow-up"></i></button>
             </div>
@@ -572,6 +621,57 @@ button.btn.active{background:var(--accent-bg,rgba(59,130,246,0.18));border-color
 
         <div class="divider"></div>
 
+        <!-- Selection Detection -->
+        <div class="section">
+          <div class="section-label"><i class="icon-eye"></i> Selection Detection</div>
+
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem">
+            <label style="font-size:0.85rem;color:#ADB5B2;min-width:5.4rem">Enabled</label>
+            <label class="toggle-switch"><input type="checkbox" id="selectionEnabled" onchange="saveSelectionSetting()"><span class="toggle-track"></span></label>
+            <span style="font-size:0.77rem;color:#4a524e">Detect text selection &amp; clipboard</span>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem">
+            <label style="font-size:0.85rem;color:#ADB5B2;min-width:5.4rem">Auto-Suggest</label>
+            <label class="toggle-switch"><input type="checkbox" id="selectionAutoSuggest" onchange="saveSelectionSetting()"><span class="toggle-track"></span></label>
+            <span style="font-size:0.77rem;color:#4a524e">Suggest on copy</span>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Suggestion Provider</div>
+            <select id="selectionProvider" onchange="saveSelectionSetting()" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:0.6rem;padding:0.5rem 0.75rem;color:#ECEEED;font-size:0.9rem;outline:none">
+              <option value="">Same as Chat</option>
+              <option value="anthropic">Anthropic</option>
+              <option value="openai">OpenAI</option>
+              <option value="ollama">Ollama (Local)</option>
+              <option value="lmstudio">LM Studio (Local)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Suggestion Model</div>
+            <input type="text" id="selectionModel" placeholder="e.g. claude-sonnet-4-20250514, gpt-4o-mini" oninput="saveSelectionSetting()" style="width:100%">
+          </div>
+
+          <div class="field">
+            <div class="field-label">Hotkey</div>
+            <input type="text" id="selectionHotkey" placeholder="CommandOrControl+Shift+E" oninput="saveSelectionSetting()" style="width:100%">
+          </div>
+
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem">
+            <label style="font-size:0.85rem;color:#ADB5B2;min-width:5.4rem">macOS Live</label>
+            <label class="toggle-switch"><input type="checkbox" id="selectionAccessibility" onchange="handleAxToggle()"><span class="toggle-track"></span></label>
+            <span style="font-size:0.77rem;color:#4a524e">Detect selection without copy</span>
+          </div>
+          <div id="axPermissionStatus" style="display:none;padding:4px 0 4px 6rem;font-size:0.77rem">
+            <span id="axPermissionIcon" style="margin-right:4px"></span>
+            <span id="axPermissionText"></span>
+            <button id="axGrantBtn" class="btn" style="margin-left:8px;padding:2px 8px;font-size:0.75rem;display:none" onclick="requestAxPermission()">Grant Access</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
         <div class="section">
           <div class="section-label">Reset Everything</div>
           <p class="desc" style="margin-bottom:6px">Reset all settings to defaults. This cannot be undone.</p>
@@ -579,6 +679,7 @@ button.btn.active{background:var(--accent-bg,rgba(59,130,246,0.18));border-color
             <button class="btn" style="border-color:rgba(239,68,68,0.3);color:#fca5a5" onclick="resetAllSettings()">Reset All Settings</button>
             <button class="btn" style="border-color:rgba(239,68,68,0.3);color:#fca5a5" onclick="resetAppearance()">Reset Appearance</button>
             <button class="btn" style="border-color:rgba(239,68,68,0.3);color:#fca5a5" onclick="resetModels()">Reset Models</button>
+            <button class="btn" style="border-color:rgba(59,130,246,0.3);color:#93c5fd" onclick="resetOnboarding()">Reset Onboarding</button>
           </div>
         </div>
       </div>
@@ -715,7 +816,7 @@ async function loadAllSettings() {
   if (settings.theme && settings.theme !== 'default') applyTheme(settings.theme);
   // Apply display scale on load
   if (settings.displayScale) {
-    document.documentElement.style.fontSize = (13 * settings.displayScale / 100) + 'px';
+    document.documentElement.style.fontSize = (15.6 * settings.displayScale / 100) + 'px';
   }
   buildAllModelSlots();
 
@@ -726,8 +827,25 @@ async function loadAllSettings() {
   if (resetBtn) resetBtn.onclick = () => resetShortcut('ptt', PTT_DEFAULT);
   // Update chat placeholder with PTT shortcut
   document.querySelectorAll('.chat-placeholder').forEach(el => {
-    el.textContent = 'Type a message or use push-to-talk (' + PTT_DISPLAY + ')';
+    el.textContent = getChatPlaceholderText();
   });
+
+  // Selection Detection settings
+  const selEnabledEl = document.getElementById('selectionEnabled');
+  const selAutoEl = document.getElementById('selectionAutoSuggest');
+  const selProviderEl = document.getElementById('selectionProvider');
+  const selModelEl = document.getElementById('selectionModel');
+  const selHotkeyEl = document.getElementById('selectionHotkey');
+  const selAxEl = document.getElementById('selectionAccessibility');
+  if (selEnabledEl) selEnabledEl.checked = !!settings.selectionDetectionEnabled;
+  if (selAutoEl) selAutoEl.checked = !!settings.selectionAutoSuggest;
+  if (selProviderEl) selProviderEl.value = settings.selectionProvider || '';
+  if (selModelEl) selModelEl.value = settings.selectionModel || '';
+  if (selHotkeyEl) selHotkeyEl.value = settings.selectionHotkey || '';
+  if (selAxEl) {
+    selAxEl.checked = !!settings.selectionAccessibilityEnabled;
+    if (selAxEl.checked) checkAxPermission();
+  }
 
   // Restore debug overlay if it was enabled
   restoreDebugState();
@@ -736,6 +854,55 @@ async function loadAllSettings() {
 function persistSettings() {
   clearTimeout(saveDebounce);
   saveDebounce = setTimeout(() => api.saveSettings(settings), 300);
+}
+
+async function handleAxToggle() {
+  saveSelectionSetting();
+  const el = document.getElementById('selectionAccessibility');
+  if (el && el.checked) {
+    await checkAxPermission();
+  } else {
+    document.getElementById('axPermissionStatus').style.display = 'none';
+  }
+}
+
+async function checkAxPermission() {
+  if (!api.checkAccessibilityPermission) return;
+  const granted = await api.checkAccessibilityPermission();
+  const statusEl = document.getElementById('axPermissionStatus');
+  const iconEl = document.getElementById('axPermissionIcon');
+  const textEl = document.getElementById('axPermissionText');
+  const btnEl = document.getElementById('axGrantBtn');
+  statusEl.style.display = 'block';
+  if (granted) {
+    iconEl.textContent = '✅';
+    textEl.textContent = 'Accessibility permission granted';
+    textEl.style.color = '#4ade80';
+    btnEl.style.display = 'none';
+  } else {
+    iconEl.textContent = '⚠️';
+    textEl.textContent = 'Accessibility permission required';
+    textEl.style.color = '#fbbf24';
+    btnEl.style.display = 'inline-block';
+  }
+}
+
+async function requestAxPermission() {
+  if (!api.requestAccessibilityPermission) return;
+  await api.requestAccessibilityPermission();
+  // Re-check after a delay (user needs time to approve in System Settings)
+  setTimeout(() => checkAxPermission(), 2000);
+}
+
+function saveSelectionSetting() {
+  const sel = id => document.getElementById(id);
+  settings.selectionDetectionEnabled = sel('selectionEnabled') ? sel('selectionEnabled').checked : false;
+  settings.selectionAutoSuggest = sel('selectionAutoSuggest') ? sel('selectionAutoSuggest').checked : false;
+  settings.selectionProvider = sel('selectionProvider') ? sel('selectionProvider').value : '';
+  settings.selectionModel = sel('selectionModel') ? sel('selectionModel').value : '';
+  settings.selectionHotkey = sel('selectionHotkey') ? sel('selectionHotkey').value : '';
+  settings.selectionAccessibilityEnabled = sel('selectionAccessibility') ? sel('selectionAccessibility').checked : false;
+  persistSettings();
 }
 
 function saveKey(el) {
@@ -809,6 +976,14 @@ function resetAppearance() {
   ['cursorColor','cursorSize','glowIntensity','springResponse','springDamping','bubbleHold','displayScale','uiFont','monoFont'].forEach(k => delete settings[k]);
   persistSettings();
   location.reload();
+}
+
+function resetOnboarding() {
+  if (!confirm('Show onboarding again next time chat opens?')) return;
+  delete settings.onboardingSeen;
+  persistSettings();
+  openTab('chat');
+  renderChatStartup();
 }
 
 function resetModels() {
@@ -894,7 +1069,7 @@ function updateSliderDisplay(key, val) {
 
 function setDisplayScale(val) {
   const pct = parseInt(val);
-  document.documentElement.style.fontSize = (13 * pct / 100) + 'px';
+  document.documentElement.style.fontSize = (15.6 * pct / 100) + 'px';
   settings.displayScale = pct;
   updateSliderDisplay('displayScale', pct);
   persistSettings();
@@ -1586,8 +1761,34 @@ async function mcpDisconnect(name) {
   mcpRefreshLists();
 }
 
-// ── Screenshot Attachments ─────────────────────────────────
+// ── Attachments ────────────────────────────────────────────
 let pendingAttachments = [];
+const MAX_TEXT_ATTACHMENT_CHARS = 12000;
+let chatHintTimeout = null;
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function showChatHint(text, isError = false) {
+  const hint = document.getElementById('chat-transcript-hint');
+  if (!hint) return;
+  if (chatHintTimeout) clearTimeout(chatHintTimeout);
+  hint.textContent = text || '';
+  hint.style.display = text ? 'block' : 'none';
+  hint.style.color = isError ? '#fca5a5' : '#93c5fd';
+  if (!text) return;
+  chatHintTimeout = setTimeout(() => {
+    hint.textContent = '';
+    hint.style.display = 'none';
+    hint.style.color = '#93c5fd';
+  }, isError ? 3500 : 2200);
+}
 
 function addAttachment(data) {
   pendingAttachments.push(data);
@@ -1599,6 +1800,118 @@ function removeAttachment(idx) {
   renderAttachments();
 }
 
+function isImageAttachmentFile(file) {
+  return !!file && !!file.type && file.type.startsWith('image/');
+}
+
+function isTextAttachmentFile(file) {
+  return !!file && (
+    (file.type && (file.type.startsWith('text/') || file.type.includes('json') || file.type.includes('javascript') || file.type.includes('xml')))
+    || /\.(txt|md|markdown|json|js|jsx|ts|tsx|css|html|xml|csv|log|yml|yaml|py|rb|go|rs|java|c|cc|cpp|h|hpp|sh)$/i.test(file.name || '')
+  );
+}
+
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error('File read failed'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function getImageDimensions(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.width, height: img.height });
+    img.onerror = () => resolve({ width: 0, height: 0 });
+    img.src = dataUrl;
+  });
+}
+
+function buildAttachmentContext(attachments) {
+  const textAttachments = attachments.filter(a => a.kind === 'text' && a.textContent);
+  if (textAttachments.length === 0) return '';
+  return textAttachments.map(att => {
+    const suffix = att.truncated ? ' (truncated)' : '';
+    return `[attached context: ${att.name || 'text'}${suffix}]\n${att.textContent}`;
+  }).join('\n\n');
+}
+
+async function processAttachmentFiles(fileList) {
+  const files = Array.from(fileList || []).filter(Boolean);
+  if (files.length === 0) return;
+
+  openTab('chat');
+  const added = [];
+  const skipped = [];
+  let skippedFolders = 0;
+
+  for (const file of files) {
+    const looksLikeFolder = !!file?.path && !file.type && !/\.[^.\/]+$/.test(file.path);
+    if (looksLikeFolder) {
+      skippedFolders += 1;
+      continue;
+    }
+
+    try {
+      if (isImageAttachmentFile(file)) {
+        const dataUrl = await fileToDataURL(file);
+        const base64 = String(dataUrl).split(',')[1] || '';
+        const dims = await getImageDimensions(dataUrl);
+        added.push({
+          kind: 'image',
+          name: file.name,
+          mimeType: file.type || 'image/png',
+          thumbnailDataUrl: dataUrl,
+          fullBase64: base64,
+          width: dims.width,
+          height: dims.height,
+          size: file.size,
+        });
+      } else if (isTextAttachmentFile(file)) {
+        let text = await file.text();
+        const truncated = text.length > MAX_TEXT_ATTACHMENT_CHARS;
+        if (truncated) text = text.slice(0, MAX_TEXT_ATTACHMENT_CHARS);
+        added.push({
+          kind: 'text',
+          name: file.name,
+          mimeType: file.type || 'text/plain',
+          textContent: text,
+          truncated,
+          size: file.size,
+          preview: text.replace(/\s+/g, ' ').trim().slice(0, 140),
+        });
+      } else {
+        skipped.push(file.name || 'Unnamed file');
+      }
+    } catch (err) {
+      skipped.push(file.name || 'Unreadable file');
+    }
+  }
+
+  if (added.length > 0) {
+    pendingAttachments.push(...added);
+    renderAttachments();
+    let hint = `${added.length} attachment${added.length === 1 ? '' : 's'} ready`;
+    if (skipped.length) hint += ` · skipped ${skipped.length}`;
+    if (skippedFolders) hint += ` · folder${skippedFolders === 1 ? '' : 's'} not attached`;
+    showChatHint(hint);
+  } else if (skippedFolders > 0) {
+    showChatHint(`drop the folder on “set working folder” to switch context`, false);
+  } else if (skipped.length > 0) {
+    showChatHint(`couldn't attach ${skipped.length === 1 ? 'that item' : 'some items'}`, true);
+  }
+
+  const input = document.getElementById('chat-input');
+  if (input) input.focus();
+}
+
+function openAttachmentPicker() {
+  openTab('chat');
+  document.getElementById('chat-file-input')?.click();
+}
+
 function renderAttachments() {
   const container = document.getElementById('chat-attachments');
   if (pendingAttachments.length === 0) {
@@ -1606,26 +1919,31 @@ function renderAttachments() {
     container.innerHTML = '';
     return;
   }
+
   container.style.display = 'flex';
-  container.innerHTML = pendingAttachments.map((a, i) =>
-    '<div style="position:relative;border-radius:8px;overflow:hidden;border:1px solid rgba(59,130,246,0.2)">' +
-    '<img src="' + a.thumbnailDataUrl + '" style="height:48px;display:block;border-radius:7px">' +
-    '<div style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,0.7);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="removeAttachment(' + i + ')">\u2715</div>' +
-    '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);font-size:8px;color:#ADB5B2;padding:1px 4px;text-align:center">' + a.width + '\u00d7' + a.height + '</div>' +
-    '</div>'
-  ).join('');
+  container.innerHTML = pendingAttachments.map((a, i) => {
+    const isImage = a.kind === 'image' || !!a.thumbnailDataUrl;
+    if (isImage) {
+      return '<div style="position:relative;border-radius:8px;overflow:hidden;border:1px solid rgba(59,130,246,0.2)">' +
+        '<img src="' + a.thumbnailDataUrl + '" style="height:48px;display:block;border-radius:7px">' +
+        '<div style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,0.7);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="removeAttachment(' + i + ')">\u2715</div>' +
+        '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);font-size:8px;color:#ADB5B2;padding:1px 4px;text-align:center">' + escapeHtml((a.name || '') + ((a.width && a.height) ? ' · ' + a.width + '\u00d7' + a.height : '')) + '</div>' +
+        '</div>';
+    }
+
+    return '<div style="position:relative;min-width:140px;max-width:220px;padding:8px 26px 8px 10px;border-radius:10px;border:1px solid rgba(59,130,246,0.2);background:rgba(255,255,255,0.04)">' +
+      '<div style="font-size:11px;font-weight:600;color:#dbeafe;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escapeHtml(a.name || 'Attached text') + '</div>' +
+      '<div style="margin-top:4px;font-size:10px;color:#9ca3af;line-height:1.4;max-height:30px;overflow:hidden">' + escapeHtml(a.preview || 'Attached as context') + '</div>' +
+      '<div style="position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,0.4);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="removeAttachment(' + i + ')">\u2715</div>' +
+      '</div>';
+  }).join('');
 }
 
 if (api.onScreenshotIntercepted) {
   api.onScreenshotIntercepted(data => {
-    addAttachment(data);
-    const chatTab = document.querySelector('[data-tab="chat"]');
-    if (chatTab && !chatTab.classList.contains('active')) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
-      chatTab.classList.add('active');
-      document.getElementById('page-chat').classList.add('active');
-    }
+    addAttachment({ ...data, kind: 'image', name: data.name || 'Clipboard image' });
+    openTab('chat');
+    showChatHint('Image attached');
   });
 }
 
@@ -1633,14 +1951,218 @@ if (api.onScreenshotIntercepted) {
 let chatStreaming = false;
 let chatStreamText = '';
 let chatIsVoiceInitiated = false; // true when mic started this exchange
+const ONBOARDING_STEPS = [
+  {
+    title: 'screen-aware help',
+    badge: 'see your screen',
+    message: "hey, i'm cursorbuddy. i can look at what you're looking at and help you find things fast.",
+    body: 'ask where something is, what a screen means, or what to click next. this image area is a placeholder for your capability artwork.',
+  },
+  {
+    title: 'attachments and context',
+    badge: 'bring files in',
+    message: 'you can drop screenshots, images, and text files right into chat so i can use them as context.',
+    body: 'we can swap this placeholder for a real onboarding image later. the little buddy stays overlaid in the corner.',
+  },
+  {
+    title: 'voice and push to talk',
+    badge: 'hands-free',
+    message: 'you can talk to me too. use push to talk when you want quick help without typing.',
+    body: 'great for navigating the screen, asking what is on a page, or getting help while you stay in flow.',
+  },
+  {
+    title: 'actions when you ask',
+    badge: 'take action',
+    message: 'when you explicitly want on-screen help, i can point things out and take interface actions for you.',
+    body: 'we will add polished capability art here next. for now this keeps onboarding inside the chat itself.',
+  },
+];
+let onboardingStepIndex = 0;
+let onboardingTypingTimer = null;
 
-function clearChat() {
-  interruptCurrentResponse();
+function getChatPlaceholderText() {
+  return 'Type a message or use push-to-talk (' + platformShortcutLabel(settings.shortcut_ptt || PTT_DEFAULT) + ')';
+}
+
+function withWorkingDirectoryContext(transcript) {
+  if (!settings.workingDirectory) return transcript;
+  return `[current working folder: ${settings.workingDirectory}]\n\n${transcript}`;
+}
+
+function stopOnboardingTyping() {
+  if (onboardingTypingTimer) {
+    clearInterval(onboardingTypingTimer);
+    onboardingTypingTimer = null;
+  }
+}
+
+function markOnboardingSeen() {
+  if (settings.onboardingSeen) return;
+  settings.onboardingSeen = true;
+  persistSettings();
+}
+
+function createChatPlaceholder() {
   const placeholder = document.createElement('div');
   placeholder.style.cssText = 'color:#3a413d;font-size:0.9rem;text-align:center;padding:40px 20px;line-height:1.6';
   placeholder.className = 'chat-placeholder';
-  placeholder.textContent = 'Type a message or use push-to-talk';
-  document.getElementById('chat-messages').replaceChildren(placeholder);
+  placeholder.textContent = getChatPlaceholderText();
+  return placeholder;
+}
+
+function clearChatStartupUi(markSeen = false) {
+  const c = document.getElementById('chat-messages');
+  if (!c) return;
+  const onboardingRow = document.getElementById('chat-onboarding');
+  if (onboardingRow) {
+    stopOnboardingTyping();
+    const bubble = onboardingRow.querySelector('[data-onboarding-bubble]');
+    const currentStep = ONBOARDING_STEPS[onboardingStepIndex];
+    if (bubble && currentStep) bubble.textContent = currentStep.message;
+    if (markSeen) markOnboardingSeen();
+  }
+  if (c.children.length === 1) {
+    const first = c.children[0];
+    if (first.className === 'chat-placeholder' || first.style?.textAlign === 'center') c.replaceChildren();
+  }
+}
+
+function typeOnboardingMessage(el, text) {
+  stopOnboardingTyping();
+  el.textContent = '';
+  let idx = 0;
+  onboardingTypingTimer = setInterval(() => {
+    idx += 1;
+    el.textContent = text.slice(0, idx);
+    if (idx >= text.length) stopOnboardingTyping();
+  }, 14);
+}
+
+function updateOnboardingUi(index) {
+  const step = ONBOARDING_STEPS[index];
+  const row = document.getElementById('chat-onboarding');
+  if (!step || !row) return;
+  onboardingStepIndex = index;
+
+  const bubble = row.querySelector('[data-onboarding-bubble]');
+  const badge = row.querySelector('[data-onboarding-badge]');
+  const title = row.querySelector('[data-onboarding-title]');
+  const body = row.querySelector('[data-onboarding-body]');
+  const stepLabel = row.querySelector('[data-onboarding-step]');
+  const nextBtn = row.querySelector('[data-onboarding-next]');
+  const backBtn = row.querySelector('[data-onboarding-back]');
+
+  if (badge) badge.textContent = step.badge;
+  if (title) title.textContent = step.title;
+  if (body) body.textContent = step.body;
+  if (stepLabel) stepLabel.textContent = (index + 1) + ' of ' + ONBOARDING_STEPS.length;
+  if (nextBtn) nextBtn.textContent = index === ONBOARDING_STEPS.length - 1 ? 'start chatting' : 'next';
+  if (backBtn) backBtn.disabled = index === 0;
+  if (bubble) typeOnboardingMessage(bubble, step.message);
+}
+
+function ensureOnboardingRow() {
+  const c = document.getElementById('chat-messages');
+  if (!c) return null;
+  let row = document.getElementById('chat-onboarding');
+  if (row) return row;
+
+  row = document.createElement('div');
+  row.id = 'chat-onboarding';
+  row.dataset.chatRole = 'assistant';
+  row.style.cssText = 'display:flex;gap:10px;padding:16px 0 8px;align-items:flex-start';
+
+  const av = document.createElement('div');
+  av.style.cssText = 'width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;background:transparent';
+  av.innerHTML = '<img src="./cbavatar.png" alt="CursorBuddy" style="width:100%;height:100%;object-fit:contain;display:block">';
+
+  const stack = document.createElement('div');
+  stack.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:10px';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'onboarding-bubble';
+  bubble.setAttribute('data-onboarding-bubble', 'true');
+
+  const card = document.createElement('div');
+  card.className = 'onboarding-card';
+  card.innerHTML =
+    '<div class="onboarding-art">' +
+      '<div class="onboarding-art-badge" data-onboarding-badge></div>' +
+      '<div class="onboarding-art-label"><div data-onboarding-title style="font-size:1rem;font-weight:700;margin-bottom:8px"></div><div data-onboarding-body></div></div>' +
+      '<div class="onboarding-art-avatar"><img src="./cbavatar.png" alt="CursorBuddy" style="width:100%;height:100%;object-fit:contain;display:block"></div>' +
+    '</div>' +
+    '<div class="onboarding-actions">' +
+      '<div class="onboarding-step-nav">' +
+        '<button class="onboarding-btn secondary nav" data-onboarding-back onclick="prevOnboardingStep()">←</button>' +
+        '<div class="onboarding-step" data-onboarding-step></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px">' +
+        '<button class="onboarding-btn secondary" onclick="finishOnboarding()">skip</button>' +
+        '<button class="onboarding-btn primary" data-onboarding-next onclick="nextOnboardingStep()"></button>' +
+      '</div>' +
+    '</div>';
+
+  stack.appendChild(bubble);
+  stack.appendChild(card);
+  row.appendChild(av);
+  row.appendChild(stack);
+  c.prepend(row);
+  return row;
+}
+
+function renderOnboardingStep(index) {
+  const c = document.getElementById('chat-messages');
+  if (!c || settings.onboardingSeen) return;
+  ensureOnboardingRow();
+  updateOnboardingUi(index);
+}
+
+function prevOnboardingStep() {
+  if (onboardingStepIndex <= 0) return;
+  updateOnboardingUi(onboardingStepIndex - 1);
+}
+
+function nextOnboardingStep() {
+  if (onboardingStepIndex >= ONBOARDING_STEPS.length - 1) {
+    finishOnboarding();
+    return;
+  }
+  updateOnboardingUi(onboardingStepIndex + 1);
+}
+
+function finishOnboarding() {
+  markOnboardingSeen();
+  stopOnboardingTyping();
+  const c = document.getElementById('chat-messages');
+  const row = document.getElementById('chat-onboarding');
+  if (row) row.remove();
+  if (c && c.children.length === 0) c.appendChild(createChatPlaceholder());
+  const input = document.getElementById('chat-input');
+  if (input) input.focus();
+}
+
+function renderChatStartup() {
+  const c = document.getElementById('chat-messages');
+  if (!c) return;
+  c.replaceChildren();
+  stopOnboardingTyping();
+  if (settings.onboardingSeen) c.appendChild(createChatPlaceholder());
+  else renderOnboardingStep(0);
+}
+
+function openTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
+  const page = document.getElementById('page-' + tabName);
+  if (tabBtn) tabBtn.classList.add('active');
+  if (page) page.classList.add('active');
+}
+
+function clearChat() {
+  interruptCurrentResponse();
+  stopOnboardingTyping();
+  renderChatStartup();
   chatStreaming = false;
   chatStreamText = '';
   liveBubbleEl = null;
@@ -1650,38 +2172,59 @@ function clearChat() {
   api.clearHistory();
 }
 
+function startNewThread() {
+  openTab('chat');
+  clearChat();
+  const input = document.getElementById('chat-input');
+  if (input) {
+    input.value = '';
+    input.style.height = 'auto';
+    input.focus();
+  }
+}
+
 function chatSend() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text && pendingAttachments.length === 0) return;
   input.value = '';
 
   // Interrupt anything in progress
   interruptCurrentResponse();
 
   // If we interrupted a response, prepend context so the AI knows
-  let transcript = text;
+  let transcript = text || 'Please review the attached items and summarize anything important.';
   if (lastInterruptedResponse) {
     const summary = lastInterruptedResponse.slice(0, 200);
-    transcript = `[the user interrupted your previous response which was: "${summary}${lastInterruptedResponse.length > 200 ? '...' : ''}" — if their new message is unrelated, answer it directly. if they seem to want you to continue, pick up where you left off and ask "shall I continue with..." to confirm]\n\n${text}`;
+    transcript = `[the user interrupted your previous response which was: "${summary}${lastInterruptedResponse.length > 200 ? '...' : ''}" — if their new message is unrelated, answer it directly. if they seem to want you to continue, pick up where you left off and ask "shall I continue with..." to confirm]\n\n${text || 'Please review the attached items and summarize anything important.'}`;
     lastInterruptedResponse = null;
   }
 
-  appendChatMsg('user', text);
+  const userPreview = text || `Attached ${pendingAttachments.length} item${pendingAttachments.length === 1 ? '' : 's'}`;
+  appendChatMsg('user', userPreview);
   chatStreaming = true;
   chatStreamText = '';
   appendChatMsg('assistant', '', true);
   chatIsVoiceInitiated = false; // typed chat — don't animate cursor
-  // Include any pending screenshot attachments
-  const attachments = pendingAttachments.map(a => a.fullBase64);
+
+  const attachmentContext = buildAttachmentContext(pendingAttachments);
+  if (attachmentContext) {
+    transcript += `\n\nAttached context:\n${attachmentContext}`;
+  }
+
+  const attachments = pendingAttachments
+    .filter(a => a.kind === 'image' || !!a.fullBase64)
+    .map(a => a.fullBase64)
+    .filter(Boolean);
+
   pendingAttachments = [];
   renderAttachments();
-  api.runInference({ transcript, attachments, voiceMode: chatIsVoiceInitiated });
+  api.runInference({ transcript: withWorkingDirectoryContext(transcript), attachments, voiceMode: chatIsVoiceInitiated });
 }
 
 function appendChatMsg(role, text, streaming) {
   const c = document.getElementById('chat-messages');
-  if (c.children.length === 1 && c.children[0].style.textAlign === 'center') c.innerHTML = '';
+  clearChatStartupUi(true);
 
   const row = document.createElement('div');
   row.dataset.chatRole = role;
@@ -1689,15 +2232,18 @@ function appendChatMsg(role, text, streaming) {
 
   // Avatar
   const av = document.createElement('div');
-  av.style.cssText = 'width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;margin-top:2px;';
+  av.style.cssText = 'width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;margin-top:2px;overflow:hidden;';
   if (role === 'user') {
     av.style.background = 'rgba(59,130,246,0.2)'; av.style.color = '#60a5fa'; av.textContent = 'You';
     av.style.fontSize = '8px'; av.style.fontWeight = '600';
   } else if (role === 'system') {
     av.style.background = 'rgba(239,68,68,0.15)'; av.style.color = '#f87171'; av.textContent = '!';
   } else {
-    av.style.background = 'rgba(59,130,246,0.12)'; av.style.color = '#3b82f6';
-    av.innerHTML = '<i class="icon-bot" style="font-size:14px"></i>';
+    av.style.width = '30px';
+    av.style.height = '30px';
+    av.style.marginTop = '0';
+    av.style.background = 'transparent';
+    av.innerHTML = '<img src="./cbavatar.png" alt="CursorBuddy" style="width:100%;height:100%;object-fit:contain;display:block">';
   }
 
   // Message stack
@@ -1930,17 +2476,18 @@ let micStream = null;
 let audioContext = null;
 let scriptProcessor = null;
 
-async function enumerateMicDevices() {
+async function enumerateMicDevices(options = {}) {
+  const { requestPermission = false } = options;
   const permStatus = document.getElementById('mic-permission-status');
+  const sel = document.getElementById('mic-device');
   try {
-    // Request permission first (triggers the prompt if not granted)
-    await navigator.mediaDevices.getUserMedia({ audio: true }).then(s => { s.getTracks().forEach(t => t.stop()); });
-    permStatus.textContent = '✓ Microphone access granted';
-    permStatus.style.color = '#22c55e';
+    if (requestPermission) {
+      const probe = await navigator.mediaDevices.getUserMedia({ audio: true });
+      probe.getTracks().forEach(t => t.stop());
+    }
 
     const devices = await navigator.mediaDevices.enumerateDevices();
     const mics = devices.filter(d => d.kind === 'audioinput');
-    const sel = document.getElementById('mic-device');
     sel.innerHTML = '<option value="">Default microphone</option>';
     mics.forEach(mic => {
       const opt = document.createElement('option');
@@ -1949,9 +2496,24 @@ async function enumerateMicDevices() {
       sel.appendChild(opt);
     });
     if (settings.micDeviceId) sel.value = settings.micDeviceId;
+
+    const hasLabels = mics.some(mic => !!mic.label);
+    if (mics.length === 0) {
+      permStatus.textContent = 'No microphones detected';
+      permStatus.style.color = '#4a524e';
+    } else if (hasLabels) {
+      permStatus.textContent = '✓ Microphone ready';
+      permStatus.style.color = '#22c55e';
+      document.getElementById('btn-mic').classList.remove('no-permission');
+    } else {
+      permStatus.textContent = 'Microphone names will appear after first mic use';
+      permStatus.style.color = '#4a524e';
+    }
   } catch(err) {
-    permStatus.textContent = '✗ Microphone access denied — check system permissions';
-    permStatus.style.color = '#ef4444';
+    permStatus.textContent = requestPermission
+      ? '✗ Microphone access denied — check system permissions'
+      : 'Microphone list unavailable until access is granted';
+    permStatus.style.color = requestPermission ? '#ef4444' : '#4a524e';
     document.getElementById('btn-mic').classList.add('no-permission');
   }
 }
@@ -1970,6 +2532,7 @@ async function startMicCapture() {
   const constraints = { audio: settings.micDeviceId ? { deviceId: { exact: settings.micDeviceId } } : true };
   try {
     micStream = await navigator.mediaDevices.getUserMedia(constraints);
+    enumerateMicDevices();
   } catch(err) {
     document.getElementById('chat-transcript-hint').textContent = 'mic error';
     document.getElementById('btn-mic').classList.add('no-permission');
@@ -2050,7 +2613,7 @@ async function toggleMic() {
         chatStreamText = '';
         chatIsVoiceInitiated = true; // mic started this exchange
         appendChatMsg('assistant', '', true);
-        api.runInference({ transcript, voiceMode: true });
+        api.runInference({ transcript: withWorkingDirectoryContext(transcript), voiceMode: true });
       } else {
         // No transcript — remove the empty bubble
         liveBubbleEl.parentElement?.remove();
@@ -2103,7 +2666,7 @@ async function toggleMic() {
 
     // Add live transcription bubble
     const c = document.getElementById('chat-messages');
-    if (c.children.length === 1 && c.children[0].style?.textAlign === 'center') c.innerHTML = '';
+    clearChatStartupUi(true);
     const wrap = document.createElement('div');
     wrap.style.cssText = 'display:flex;justify-content:flex-end;width:100%';
     const b = document.createElement('div');
@@ -2161,7 +2724,7 @@ if (api.onPushToTalk) {
         // Add live transcription bubble
         interruptCurrentResponse();
         const c = document.getElementById('chat-messages');
-        if (c.children.length === 1 && c.children[0].className === 'chat-placeholder') c.replaceChildren();
+        clearChatStartupUi(true);
         const wrap = document.createElement('div');
         wrap.style.cssText = 'display:flex;justify-content:flex-end;width:100%';
         const b = document.createElement('div');
@@ -2195,7 +2758,7 @@ if (api.onPushToTalk) {
           chatStreaming = true;
           chatStreamText = '';
           appendChatMsg('assistant', '', true);
-          api.runInference({ transcript: finalText, voiceMode: true });
+          api.runInference({ transcript: withWorkingDirectoryContext(finalText), voiceMode: true });
         } else {
           liveBubbleEl.parentElement?.remove();
           liveBubbleEl = null;
@@ -2213,23 +2776,200 @@ if (api.onPushToTalk) {
   });
 }
 
-// ── Screenshot capture button ──────────────────────────
-async function captureAndShow() {
-  const btn = document.getElementById('btn-attach');
-  btn.style.color = '#60a5fa';
-  const chinText = document.getElementById('chat-transcript-hint');
-  chinText.textContent = 'capturing…';
-  chinText.classList.add('active');
-  try {
-    const screens = await api.captureScreens();
-    chinText.textContent = screens.length + ' screen' + (screens.length > 1 ? 's' : '') + ' captured';
-    setTimeout(() => { chinText.textContent = ''; chinText.classList.remove('active'); }, 2000);
-  } catch(err) {
-    chinText.textContent = 'capture failed';
-    setTimeout(() => { chinText.textContent = ''; chinText.classList.remove('active'); }, 2000);
-  }
-  btn.style.color = '';
+// ── Attachment picker + drag/drop ───────────────────────
+const attachmentInputEl = document.getElementById('chat-file-input');
+attachmentInputEl?.addEventListener('change', async (event) => {
+  const files = event.target.files;
+  await processAttachmentFiles(files);
+  event.target.value = '';
+});
+
+let dragDepth = 0;
+let dragActiveZone = 'attach';
+let dragFolderMode = false;
+
+function getDroppedItems(event) {
+  return Array.from(event.dataTransfer?.items || []);
 }
+
+function dragHasFiles(event) {
+  return Array.from(event.dataTransfer?.types || []).includes('Files');
+}
+
+function dirname(filePath = '') {
+  const parts = String(filePath).split(/[\\/]/).filter(Boolean);
+  if (parts.length <= 1) return filePath;
+  parts.pop();
+  const prefix = String(filePath).startsWith('/') ? '/' : '';
+  return prefix + parts.join('/');
+}
+
+function commonPath(paths = []) {
+  const splitPaths = paths
+    .filter(Boolean)
+    .map((value) => String(value).split(/[\\/]/).filter(Boolean));
+  if (splitPaths.length === 0) return '';
+
+  const shared = [];
+  const maxLength = Math.min(...splitPaths.map(parts => parts.length));
+  for (let i = 0; i < maxLength; i += 1) {
+    const segment = splitPaths[0][i];
+    if (splitPaths.every(parts => parts[i] === segment)) shared.push(segment);
+    else break;
+  }
+
+  if (shared.length === 0) return '';
+  const first = String(paths[0]);
+  const prefix = first.startsWith('/') ? '/' : '';
+  return prefix + shared.join('/');
+}
+
+function dragIncludesDirectory(event) {
+  const items = getDroppedItems(event);
+  if (items.some((item) => item.webkitGetAsEntry?.()?.isDirectory)) return true;
+
+  const files = Array.from(event.dataTransfer?.files || []);
+  if (files.some((file) => file?.path && !file.type && !/\.[^.\/]+$/.test(file.path))) return true;
+
+  if (items.length > 0 && items.every((item) => item.kind === 'file' && !item.type)) return true;
+  return false;
+}
+
+function getFirstDroppedDirectoryPath(event) {
+  for (const item of getDroppedItems(event)) {
+    const entry = item.webkitGetAsEntry?.();
+    const file = item.getAsFile?.();
+    if (entry?.isDirectory && file?.path) return file.path;
+    if (file?.path && !file.type && !/\.[^.\/]+$/.test(file.path)) return file.path;
+  }
+
+  const files = Array.from(event.dataTransfer?.files || []).map(file => file.path).filter(Boolean);
+  if (files.length > 1) {
+    const shared = commonPath(files.map(path => dirname(path)));
+    if (shared) return shared;
+  }
+  if (files.length === 1) return dirname(files[0]);
+  return '';
+}
+
+function basename(filePath = '') {
+  return String(filePath).split(/[\\/]/).filter(Boolean).pop() || filePath;
+}
+
+function updateDropZoneFromPointer(event) {
+  const overlay = document.getElementById('drop-overlay');
+  const attachZone = document.getElementById('drop-zone-attach');
+  const workspaceZone = document.getElementById('drop-zone-workspace');
+  if (!overlay || !attachZone || !workspaceZone) return;
+
+  if (!dragFolderMode) {
+    dragActiveZone = 'attach';
+    attachZone.classList.add('active');
+    workspaceZone.classList.remove('active');
+    return;
+  }
+
+  const rect = overlay.getBoundingClientRect();
+  const useWorkspace = event.clientX > rect.left + rect.width / 2;
+  dragActiveZone = useWorkspace ? 'workspace' : 'attach';
+  attachZone.classList.toggle('active', dragActiveZone === 'attach');
+  workspaceZone.classList.toggle('active', dragActiveZone === 'workspace');
+}
+
+function setDropOverlayState(visible, folderMode = false, event = null) {
+  const overlay = document.getElementById('drop-overlay');
+  const workspaceZone = document.getElementById('drop-zone-workspace');
+  const attachSubtitle = document.getElementById('drop-zone-attach-subtitle');
+  const workspaceSubtitle = document.getElementById('drop-zone-workspace-subtitle');
+  if (!overlay || !workspaceZone || !attachSubtitle || !workspaceSubtitle) return;
+
+  dragFolderMode = folderMode;
+  overlay.classList.toggle('visible', visible);
+  overlay.classList.toggle('folder-mode', visible && folderMode);
+  workspaceZone.style.display = folderMode ? 'flex' : 'none';
+  attachSubtitle.textContent = folderMode
+    ? 'Drop here to attach files from this folder'
+    : 'Drop images or text files to attach';
+  workspaceSubtitle.textContent = folderMode
+    ? 'Drop here to set this folder as the working directory'
+    : 'Drop a folder here to use it as the working directory';
+
+  if (!visible) {
+    dragActiveZone = 'attach';
+    document.getElementById('drop-zone-attach')?.classList.add('active');
+    workspaceZone.classList.remove('active');
+    return;
+  }
+
+  updateDropZoneFromPointer(event || { clientX: -Infinity });
+}
+
+function setWorkingDirectoryFromDrop(folderPath) {
+  if (!folderPath) return false;
+  settings.workingDirectory = folderPath;
+  persistSettings();
+  openTab('chat');
+  showChatHint(`working folder switched to ${basename(folderPath)}`);
+  const input = document.getElementById('chat-input');
+  if (input) input.focus();
+  return true;
+}
+
+window.addEventListener('dragenter', (event) => {
+  if (!dragHasFiles(event)) return;
+  event.preventDefault();
+  dragDepth += 1;
+  const folderCandidate = dragIncludesDirectory(event);
+  setDropOverlayState(true, folderCandidate, event);
+});
+
+window.addEventListener('dragover', (event) => {
+  if (!dragHasFiles(event)) return;
+  event.preventDefault();
+  const folderCandidate = dragIncludesDirectory(event);
+  setDropOverlayState(true, folderCandidate, event);
+  if (event.dataTransfer) event.dataTransfer.dropEffect = dragFolderMode && dragActiveZone === 'workspace' ? 'link' : 'copy';
+});
+
+window.addEventListener('dragleave', (event) => {
+  if (!dragHasFiles(event)) return;
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) setDropOverlayState(false);
+});
+
+window.addEventListener('drop', async (event) => {
+  if (!dragHasFiles(event) && !event.dataTransfer?.getData('text/plain')) return;
+  event.preventDefault();
+  const droppedFolderPath = getFirstDroppedDirectoryPath(event);
+  const droppedInWorkspaceZone = dragFolderMode && dragActiveZone === 'workspace';
+  dragDepth = 0;
+  setDropOverlayState(false);
+
+  if (droppedInWorkspaceZone && droppedFolderPath) {
+    setWorkingDirectoryFromDrop(droppedFolderPath);
+    return;
+  }
+
+  const files = Array.from(event.dataTransfer?.files || []);
+  if (files.length > 0) {
+    await processAttachmentFiles(files);
+    return;
+  }
+
+  const droppedText = (event.dataTransfer?.getData('text/plain') || '').trim();
+  if (droppedText) {
+    addAttachment({
+      kind: 'text',
+      name: 'Dropped text',
+      mimeType: 'text/plain',
+      textContent: droppedText.slice(0, MAX_TEXT_ATTACHMENT_CHARS),
+      truncated: droppedText.length > MAX_TEXT_ATTACHMENT_CHARS,
+      preview: droppedText.replace(/\s+/g, ' ').slice(0, 140),
+    });
+    openTab('chat');
+    showChatHint('Text attached');
+  }
+});
 
 // ── Audio playback + interruption tracking ─────────────────
 let currentAudio = null;
@@ -2319,7 +3059,7 @@ loadAllSettings().then(() => {
   checkCLI('codex', 'cli-codex');
   checkCLI('ollama', 'cli-ollama');
   checkCLI('lms', 'cli-lms');
-  enumerateMicDevices();
+  enumerateMicDevices({ requestPermission: false });
   mcpRefreshLists();
   mcpServerRefresh();
   // Load VAD checkbox
@@ -2328,6 +3068,7 @@ loadAllSettings().then(() => {
   ['ptt','cursor','select'].forEach(id => {
     if (settings['shortcut_' + id]) document.getElementById('shortcut-' + id).textContent = settings['shortcut_' + id];
   });
+  renderChatStartup();
 });
 </script>
 </body>

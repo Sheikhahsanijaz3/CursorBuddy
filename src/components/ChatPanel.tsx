@@ -374,9 +374,9 @@ export const ChatPanel: React.FC<{ height?: number }> = ({ height }) => {
             disabled={isStreaming || !input.trim()}
             aria-label="Send message"
             style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
               border: "none",
               background:
                 isStreaming || !input.trim()
@@ -390,7 +390,9 @@ export const ChatPanel: React.FC<{ height?: number }> = ({ height }) => {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 14,
+              fontSize: 16,
+              fontWeight: 700,
+              lineHeight: 1,
               flexShrink: 0,
               transition: "background 0.15s",
             }}

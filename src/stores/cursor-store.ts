@@ -67,6 +67,9 @@ interface CursorStoreState {
   isOverlayVisible: boolean;
   cursorOpacity: number;
 
+  // ── Selection chips ─────────────────────────────────────
+  selectionChipsVisible: boolean;
+
   // ── Actions ───────────────────────────────────────────────
   setBuddyPosition: (position: CursorPosition) => void;
   setSystemCursorPosition: (position: CursorPosition) => void;
@@ -84,6 +87,7 @@ interface CursorStoreState {
   setNavigationBubbleScale: (scale: number) => void;
   setIsOverlayVisible: (visible: boolean) => void;
   setCursorOpacity: (opacity: number) => void;
+  setSelectionChipsVisible: (visible: boolean) => void;
   /** Reset navigation state back to cursor-following */
   resetToFollowingCursor: () => void;
 }
@@ -105,6 +109,7 @@ export const useCursorStore = create<CursorStoreState>((set) => ({
   navigationBubbleScale: 1.0,
   isOverlayVisible: true,
   cursorOpacity: 1.0,
+  selectionChipsVisible: false,
 
   // ── Setters ───────────────────────────────────────────────
   setBuddyPosition: (position) => set((state) => {
@@ -140,6 +145,7 @@ export const useCursorStore = create<CursorStoreState>((set) => ({
   setNavigationBubbleScale: (scale) => set({ navigationBubbleScale: scale }),
   setIsOverlayVisible: (visible) => set({ isOverlayVisible: visible }),
   setCursorOpacity: (opacity) => set({ cursorOpacity: opacity }),
+  setSelectionChipsVisible: (visible) => set({ selectionChipsVisible: visible }),
 
   resetToFollowingCursor: () =>
     set({

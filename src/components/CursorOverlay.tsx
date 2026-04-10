@@ -26,11 +26,14 @@ import { BlueCursorTriangle } from "./BlueCursorTriangle";
 import { BlueCursorWaveform } from "./BlueCursorWaveform";
 import { BlueCursorSpinner } from "./BlueCursorSpinner";
 import { NavigationBubble } from "./NavigationBubble";
+import { SuggestionChips } from "./SuggestionChips";
+import { useSelectionDetection } from "../hooks/use-selection-detection";
 
 export const CursorOverlay: React.FC = () => {
   useCursorTracking();
   useBuddyNavigation();
   useElectronBridge();
+  useSelectionDetection();
 
   const isOverlayVisible = useCursorStore((s) => s.isOverlayVisible);
 
@@ -87,6 +90,7 @@ export const CursorOverlay: React.FC = () => {
       <BlueCursorWaveform />
       <BlueCursorSpinner />
       <NavigationBubble />
+      <SuggestionChips />
     </OverlayViewport>
   );
 };

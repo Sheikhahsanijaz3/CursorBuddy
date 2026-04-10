@@ -70,4 +70,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   /** TTS */
   speak: (text) => ipcRenderer.invoke("tts:speak", text),
+
+  // Selection detection
+  onSelectionDetected: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('selection:text-detected', handler);
+    return () => ipcRenderer.removeListener('selection:text-detected', handler);
+  },
+  getSelectionSuggestions: (text) => ipcRenderer.invoke('selection:get-suggestions', text),
+  triggerSelection: (text) => ipcRenderer.send('selection:trigger', text),
+  setSelectionEnabled: (enabled) => ipcRenderer.send('selection:set-enabled', enabled),
 });

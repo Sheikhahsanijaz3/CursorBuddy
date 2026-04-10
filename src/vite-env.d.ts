@@ -35,6 +35,10 @@ interface ElectronAPI {
 
   // TTS
   speak: (text: string) => Promise<{ ok: boolean; audioBase64?: string; mimeType?: string; error?: string }>;
+
+  // Selection detection
+  onSelectionDetected?: (callback: (data: { text: string; source: string }) => void) => (() => void) | void;
+  getSelectionSuggestions?: (text: string) => Promise<Array<{ action: string; label: string; prompt: string }>>;
 }
 
 interface Window {

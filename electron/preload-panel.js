@@ -92,4 +92,15 @@ contextBridge.exposeInMainWorld("panelAPI", {
   mcpDisconnect: (name) => ipcRenderer.invoke("mcp:disconnect", name),
   mcpListTools: () => ipcRenderer.invoke("mcp:list-tools"),
   mcpListServers: () => ipcRenderer.invoke("mcp:list-servers"),
+
+  // Selection detection
+  onSelectionDetected: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('selection:text-detected', handler);
+    return () => ipcRenderer.removeListener('selection:text-detected', handler);
+  },
+  getSelectionSuggestions: (text) => ipcRenderer.invoke('selection:get-suggestions', text),
+  setSelectionEnabled: (enabled) => ipcRenderer.send('selection:set-enabled', enabled),
+  checkAccessibilityPermission: () => ipcRenderer.invoke('selection:check-accessibility'),
+  requestAccessibilityPermission: () => ipcRenderer.invoke('selection:request-accessibility'),
 });

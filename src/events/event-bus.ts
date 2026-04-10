@@ -129,6 +129,22 @@ export interface ConfigEvents {
   "config:update": Record<string, unknown>;
 }
 
+/** Selection suggestion types */
+export interface SelectionSuggestion {
+  action: string;
+  label: string;
+  prompt: string;
+}
+
+/** Selection suggestion events (text selection → action chips) */
+export interface SelectionSuggestionEvents {
+    'selection:text-detected': { text: string; source: 'clipboard' | 'accessibility' | 'hotkey' | 'manual'; bounds?: { x: number; y: number; width: number; height: number } | null; app?: string | null };
+    'selection:cleared': {};
+  'selection:suggestions-ready': { text: string; suggestions: SelectionSuggestion[] };
+  'selection:action-chosen': { action: string; prompt: string; text: string };
+  'selection:dismissed': {};
+}
+
 /** Element selection events */
 export interface SelectionEvents {
   /** Start click-drag element selection mode */
@@ -151,7 +167,8 @@ export type AllEvents = VoiceEvents &
   CursorEvents &
   PipelineEvents &
   ConfigEvents &
-  SelectionEvents;
+  SelectionEvents &
+  SelectionSuggestionEvents;
 
 /** Typed event names */
 export type EventName = keyof AllEvents;

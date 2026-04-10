@@ -22,6 +22,8 @@ const mcpClient = require("./services/mcp-client.js");
 const toolLoader = require("./services/tool-loader.js");
 const { getSystemTools } = require("./services/system-actions.js");
 const { sendToOverlay, sendToPanel, broadcast, setWindows, getOverlayWindow, getPanelWindow } = require("./lib/ipc-helpers.js");
+const selectionService = require('./services/selection.js');
+const selectionInference = require('./services/selection-inference.js');
 const { loadSettings, saveSettings } = require("./lib/settings-cache.js");
 const { parsePointingCoordinates } = require("./lib/point-parser.js");
 const log = require("./lib/session-logger.js");
@@ -39,6 +41,47 @@ let tray = null;
 let isFollowingCursor = true;
 let cursorTrackingInterval = null;
 let lastCursorDisplayId = null;
+
+function wantsComputerControl(transcript = "") {
+  const text = String(transcript || "").toLowerCase();
+  if (!text.trim()) return false;
+
+  return [
+    /\bclick\b/,
+    /\bdouble\s*click\b/,
+    /\bright\s*click\b/,
+    /\bpress\b/,
+    /\btype\b/,
+    /\bscroll\b/,
+    /\bdrag\b/,
+    /\bdrop\b/,
+    /\bhover\b/,
+    /\bopen\b.*\b(app|application|browser|site|website|url|link|terminal|finder|settings|chrome|safari|firefox|vscode|code)\b/,
+    /\blaunch\b/,
+    /\bgo to\b/,
+    /\bnavigate\b/,
+    /\bswitch to\b/,
+    /\bclose\b.*\b(tab|window|app|application)\b/,
+    /\bfind\b.*\b(button|menu|tab|field|input|dropdown|icon|setting|toggle)\b/,
+    /\bwhere('?s| is)\b.*\b(button|menu|tab|field|input|dropdown|icon|setting|toggle)\b/,
+  ].some((pattern) => pattern.test(text));
+}
+
+function getInferenceTools(settings = {}, transcript = "") {
+  const directTools = [
+    ...mcpClient.getAllTools(),
+    ...toolLoader.getToolList(),
+  ];
+  const systemTools = getSystemTools({
+    settings,
+    includeGui: wantsComputerControl(transcript),
+  });
+  return [...directTools, ...systemTools];
+}
+
+function shouldAllowComputerUseFallback(transcript = "") {
+  return wantsComputerControl(transcript);
+}
 
 // ── Screen Bounds ─────────────────────────────────────────────
 
@@ -391,11 +434,7 @@ ipcMain.on("inference:run", async (_event, { transcript, provider, model, attach
     const cursorScreen = screens.find(s => s.isCursorScreen) || screens[0];
 
     // Gather all available tools (system actions + MCP client + pi-compatible)
-    const allTools = [
-      ...getSystemTools(),
-      ...mcpClient.getAllTools(),
-      ...toolLoader.getToolList(),
-    ];
+    const allTools = getInferenceTools(settings, transcript);
 
     // Voice mode: synchronized TTS + text reveal + cursor pointing pipeline
     let voicePipeline = null;
@@ -487,8 +526,10 @@ ipcMain.on("inference:run", async (_event, { transcript, provider, model, attach
               }
             }
 
-            // Fallback: computer use if no POINT and CU configured
-            if (!chunk.scaledPoint && settings.cuProvider && settings.cuModel && cursorScreen) {
+            const assistantExplicitlySaidNoPoint = /\[POINT:none\]/i.test(fullResponseText);
+
+            // Fallback: computer use only for explicit GUI help, and never when the assistant already decided no pointing is needed
+            if (!chunk.scaledPoint && !assistantExplicitlySaidNoPoint && shouldAllowComputerUseFallback(transcript) && settings.cuProvider && settings.cuModel && cursorScreen) {
               try {
                 const cuResult = await runComputerUse({
                   userQuestion: transcript,
@@ -646,6 +687,34 @@ ipcMain.handle("tools:reload", async () => {
   return toolLoader.loadAllTools();
 });
 
+// ── IPC: Selection Detection ──────────────────────────────────
+
+ipcMain.handle('selection:get-suggestions', async (_event, text) => {
+  return selectionInference.getSuggestions(text);
+});
+
+ipcMain.handle('selection:run-action', async (_event, actionPrompt) => {
+  // Route through the main inference pipeline
+  return actionPrompt; // Renderer will call inference:run with this
+});
+
+ipcMain.on('selection:trigger', (_event, text) => {
+  selectionService.triggerFromRenderer(text);
+});
+
+ipcMain.on('selection:set-enabled', (_event, enabled) => {
+  selectionService.setEnabled(enabled);
+});
+
+ipcMain.handle('selection:check-accessibility', () => {
+  return selectionService.checkAccessibilityPermission();
+});
+
+ipcMain.handle('selection:request-accessibility', () => {
+  selectionService.requestAccessibilityPermission();
+  return true;
+});
+
 // ── IPC: Session Logs ─────────────────────────────────────
 
 ipcMain.handle("logs:current-path", () => log.getLogPath());
@@ -712,6 +781,7 @@ ipcMain.handle("verify-cli", async (_event, binaryName) => {
 
 app.on("before-quit", () => {
   app.isQuitting = true;
+  selectionService.stop();
   log.event("app:quit");
   log.close();
   try { mcpClient.disconnectAll(); } catch (_) {}
@@ -750,6 +820,12 @@ app.whenReady().then(() => {
   startCursorTracking();
   registerPushToTalk();
   startScreenshotInterceptor();
+
+  // Initialize selection detection
+  selectionService.init((channel, data) => {
+    sendToOverlay(channel, data);
+    sendToPanel(channel, data);
+  });
 
   // Load calibration from settings
   const startupSettings = loadSettings();
@@ -806,11 +882,6 @@ function startScreenshotInterceptor() {
       fullBase64: jpegB64,
       width: size.width,
       height: size.height,
-    });
-    sendToOverlay("overlay-command", "cursor:fly-to", {
-      x: size.width / 2, y: size.height / 2,
-      label: "screenshot",
-      bubbleText: "screenshot captured! ask me about it",
     });
   }, 500);
 }
@@ -926,11 +997,7 @@ function stopPushToTalk() {
         const screens = await captureAllScreens();
         const cursorScreen = screens.find(s => s.isCursorScreen) || screens[0];
         const currentSettings = loadSettings();
-        const allTools = [
-          ...getSystemTools(),
-          ...mcpClient.getAllTools(),
-          ...toolLoader.getToolList(),
-        ];
+        const allTools = getInferenceTools(currentSettings, pttFinalTranscript);
         let fullResponseText = "";
         let firstTextReceived = false;
 

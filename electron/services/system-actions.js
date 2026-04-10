@@ -10,6 +10,8 @@
  */
 
 const { execFileSync } = require("child_process");
+const fs = require("fs");
+const path = require("path");
 const log = require("../lib/session-logger.js");
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -24,9 +26,58 @@ function runOsascript(script) {
 
 // ── Tool Definitions (Anthropic format) ──────────────────────
 
-const SYSTEM_TOOLS = [
-  {
-    name: "click",
+function getWorkingDirectory(settings = {}) {
+  return settings.workingDirectory || process.cwd();
+}
+
+function createDirectTools(settings = {}) {
+  return [
+    {
+      name: "get_working_directory",
+      description: "Return the current working folder used for direct tooling and repo/file questions.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => {
+        const cwd = getWorkingDirectory(settings);
+        log.event("action:get_working_directory", { cwd });
+        return { content: [{ type: "text", text: cwd }] };
+      },
+    },
+    {
+      name: "list_directory",
+      description: "List files and folders from a directory. Defaults to the current working folder.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          dir: { type: "string", description: "Optional directory path. Defaults to current working folder." },
+          limit: { type: "number", description: "Maximum entries to return. Default 50." },
+        },
+      },
+      execute: async (input) => {
+        const targetDir = path.resolve(input?.dir || getWorkingDirectory(settings));
+        const limit = Math.min(Math.max(Number(input?.limit || 50), 1), 200);
+        try {
+          const entries = fs.readdirSync(targetDir, { withFileTypes: true })
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .slice(0, limit)
+            .map((entry) => `${entry.isDirectory() ? '[dir]' : '[file]'} ${entry.name}`);
+          log.event("action:list_directory", { dir: targetDir, limit, count: entries.length });
+          return { content: [{ type: "text", text: `directory: ${targetDir}\n${entries.join("\n") || "(empty)"}` }] };
+        } catch (err) {
+          log.error("action:list_directory_error", err, { dir: targetDir });
+          return { content: [{ type: "text", text: `List failed: ${err.message}` }] };
+        }
+      },
+    },
+  ];
+}
+
+function createGuiTools() {
+  return [
+    {
+      name: "click",
     description: "Click at screen coordinates. Use after identifying where to click from a screenshot.",
     inputSchema: {
       type: "object",
@@ -179,6 +230,7 @@ const SYSTEM_TOOLS = [
     },
   },
 ];
+}
 
 // ── Key Combo Parser ─────────────────────────────────────────
 
@@ -245,8 +297,11 @@ function buildKeySequence(combo) {
 
 // ── Public API ───────────────────────────────────────────────
 
-function getSystemTools() {
-  return SYSTEM_TOOLS;
+function getSystemTools(options = {}) {
+  const { includeGui = true, settings = {} } = options;
+  const tools = [...createDirectTools(settings)];
+  if (includeGui) tools.push(...createGuiTools());
+  return tools;
 }
 
 module.exports = { getSystemTools };
