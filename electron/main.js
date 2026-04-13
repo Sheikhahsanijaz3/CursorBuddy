@@ -137,6 +137,7 @@ function togglePanel(trayBounds) {
   if (!panelWindow || panelWindow.isDestroyed()) {
     createPanelWindow(trayBounds);
   } else if (panelWindow.isVisible()) {
+    sendToOverlay("overlay-command", "selection:panel-chat-state", { open: false });
     panelWindow.hide();
   } else {
     positionPanelNearTray(trayBounds);
@@ -404,6 +405,16 @@ ipcMain.on("set-following-cursor", (_event, following) => {
   isFollowingCursor = following;
 });
 
+ipcMain.on("set-overlay-interactive", (_event, interactive) => {
+  try {
+    const overlayWindow = getOverlayWindow();
+    if (!overlayWindow || overlayWindow.isDestroyed()) return;
+    overlayWindow.setIgnoreMouseEvents(!interactive, { forward: true });
+  } catch (err) {
+    console.warn('[overlay] setIgnoreMouseEvents failed:', err);
+  }
+});
+
 ipcMain.on("panel:overlay-command", (_event, command, payload) => {
   // Intercept calibration updates
   if (command === "config:update" && payload && payload.calibration !== undefined) {
@@ -419,6 +430,7 @@ ipcMain.on("panel:overlay-command", (_event, command, payload) => {
 });
 
 ipcMain.on("panel:hide", () => {
+  sendToOverlay("overlay-command", "selection:panel-chat-state", { open: false });
   const panelWindow = getPanelWindow();
   if (panelWindow && !panelWindow.isDestroyed()) panelWindow.hide();
 });

@@ -16,6 +16,12 @@ export function useSelectionDetection(): void {
     const api = window.electronAPI;
     if (!api?.onSelectionDetected) return;
 
+    const panelChatOpenRef = { current: false };
+    const handlePanelState = (payload?: { open?: boolean }) => {
+      panelChatOpenRef.current = Boolean(payload?.open);
+    };
+    eventBus.onDynamic("selection:panel-chat-state", handlePanelState as (...args: unknown[]) => void);
+
     let bubbleTimeout: ReturnType<typeof setTimeout> | null = null;
     const clearBubble = () => {
       if (bubbleTimeout) clearTimeout(bubbleTimeout);
@@ -39,7 +45,9 @@ export function useSelectionDetection(): void {
         app,
       });
 
-      // If we have selection bounds, fly the cursor to the selection
+      // If we have selection bounds, fly to the actual selection.
+      // Otherwise pin the buddy near the current cursor position so the
+      // overlay stays put instead of continuing to follow the cursor.
       eventBus.emit("cursor:show");
 
       if (bounds) {
@@ -52,7 +60,13 @@ export function useSelectionDetection(): void {
           bubbleText: preview,
         });
       } else {
-        eventBus.emit("cursor:set-bubble-text", { text: preview });
+        const cursorPos = useCursorStore.getState().systemCursorPosition;
+        eventBus.emit("cursor:fly-to", {
+          x: cursorPos.x + 8,
+          y: cursorPos.y + 12,
+          label: "selection",
+          bubbleText: preview,
+        });
       }
 
       if (bubbleTimeout) clearTimeout(bubbleTimeout);
@@ -60,8 +74,8 @@ export function useSelectionDetection(): void {
         eventBus.emit("cursor:set-bubble-text", { text: "" });
       }, 3500);
 
-      // Request suggestions from main process
-      if (api.getSelectionSuggestions) {
+      // Request suggestions from main process only when the panel chat is not handling them.
+      if (!panelChatOpenRef.current && api.getSelectionSuggestions) {
         try {
           const suggestions = await api.getSelectionSuggestions(text);
           if (suggestions && suggestions.length > 0) {
@@ -83,6 +97,7 @@ export function useSelectionDetection(): void {
 
     return () => {
       clearBubble();
+      eventBus.offDynamic("selection:panel-chat-state", handlePanelState as (...args: unknown[]) => void);
       if (typeof cleanup === "function") cleanup();
       if (typeof clearCleanup === "function") clearCleanup();
     };

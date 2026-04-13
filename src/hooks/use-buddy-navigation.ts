@@ -80,21 +80,30 @@ export function useBuddyNavigation() {
         DS.pointerPhrases[Math.floor(Math.random() * DS.pointerPhrases.length)];
 
       streamBubbleText(phrase, 0, () => {
-        // Hold for 3 seconds, then fly back
-        holdTimeoutRef.current = setTimeout(() => {
-          const currentMode = useCursorStore.getState().navigationMode;
-          if (currentMode !== "pointing-at-target") return;
-
-          useCursorStore.getState().setNavigationBubbleOpacity(0);
-
-          // Wait for fade out, then start return flight
+        const MAX_WAIT_MS = 30000;
+        const waitStart = Date.now();
+        const scheduleReturn = () => {
           holdTimeoutRef.current = setTimeout(() => {
-            const stillPointing =
-              useCursorStore.getState().navigationMode === "pointing-at-target";
-            if (!stillPointing) return;
-            startReturnFlightRef.current();
-          }, 500);
-        }, DS.pointingHoldDurationMs);
+            const currentState = useCursorStore.getState();
+            if (currentState.navigationMode !== "pointing-at-target") return;
+            if (currentState.selectionChipsVisible && Date.now() - waitStart < MAX_WAIT_MS) {
+              scheduleReturn();
+              return;
+            }
+
+            useCursorStore.getState().setNavigationBubbleOpacity(0);
+
+            // Wait for fade out, then start return flight
+            holdTimeoutRef.current = setTimeout(() => {
+              const stillPointing =
+                useCursorStore.getState().navigationMode === "pointing-at-target";
+              if (!stillPointing) return;
+              startReturnFlightRef.current();
+            }, 500);
+          }, DS.pointingHoldDurationMs);
+        };
+
+        scheduleReturn();
       });
 
       eventBus.emit("cursor:arrived");

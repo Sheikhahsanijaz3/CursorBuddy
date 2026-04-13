@@ -200,7 +200,7 @@ button.btn.active{background:var(--accent-bg,rgba(59,130,246,0.18));border-color
     </div>
   </div>
   <div class="titlebar">
-    <button class="titlebar-action titlebar-close" onclick="panelAPI.hidePanel()" title="Close" aria-label="Close">✕</button>
+    <button class="titlebar-action titlebar-close" onclick="handlePanelClose()" title="Close" aria-label="Close">✕</button>
     <div class="titlebar-spacer"></div>
     <button class="titlebar-action" onclick="startNewThread()" title="New thread" aria-label="New thread">
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -778,6 +778,24 @@ const PTT_DEFAULT = 'Ctrl+Alt+Space';
 const PTT_DISPLAY = platformShortcutLabel(PTT_DEFAULT);
 
 // ── Tab switching ─────────────────────────────────────────
+function isChatInterfaceOpen() {
+  const chatTab = document.querySelector('[data-tab="chat"]');
+  return !document.hidden && !!chatTab && chatTab.classList.contains('active');
+}
+
+function syncSelectionPresentationMode() {
+  api.sendCommand('selection:panel-chat-state', { open: isChatInterfaceOpen() });
+}
+
+function handlePanelClose() {
+  api.sendCommand('selection:panel-chat-state', { open: false });
+  panelAPI.hidePanel();
+}
+
+document.addEventListener('visibilitychange', syncSelectionPresentationMode);
+window.addEventListener('focus', syncSelectionPresentationMode);
+window.addEventListener('blur', syncSelectionPresentationMode);
+
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -785,6 +803,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.add('active');
     const page = document.getElementById('page-' + btn.dataset.tab);
     if (page) page.classList.add('active');
+    syncSelectionPresentationMode();
   });
 });
 
@@ -2277,6 +2296,46 @@ function appendChatMsg(role, text, streaming) {
 let lastSelectionCaptureKey = '';
 let lastSelectionCaptureAt = 0;
 
+// Chip styles kept in sync with src/components/SuggestionChips.tsx
+function renderSelectionSuggestions(container, suggestions) {
+  if (!container) return;
+  container.innerHTML = '';
+  if (!suggestions || suggestions.length === 0) return;
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px';
+  suggestions.forEach((suggestion) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid rgba(59,130,246,0.22);background:rgba(59,130,246,0.1);color:#dbeafe;font-size:0.75rem;font-weight:600;cursor:pointer';
+    chip.textContent = suggestion.label;
+    chip.addEventListener('click', () => {
+      openTab('chat');
+      const input = document.getElementById('chat-input');
+      if (!input) return;
+      input.value = suggestion.prompt;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+    });
+    wrap.appendChild(chip);
+  });
+  container.appendChild(wrap);
+}
+
+let _suggestionRequestId = 0;
+async function maybeLoadSelectionSuggestions(text, suggestionContainer) {
+  if (!isChatInterfaceOpen() || !api.getSelectionSuggestions) return;
+  const requestId = ++_suggestionRequestId;
+  try {
+    const suggestions = await api.getSelectionSuggestions(text);
+    // Ignore stale responses if a newer request was fired
+    if (requestId !== _suggestionRequestId) return;
+    renderSelectionSuggestions(suggestionContainer, suggestions || []);
+  } catch (err) {
+    console.warn('[SelectionChat] Failed to load suggestions:', err);
+  }
+}
+
 function appendSelectionCapture(text, source, app) {
   const cleanText = String(text || '').trim();
   if (!cleanText) return;
@@ -2307,10 +2366,9 @@ function appendSelectionCapture(text, source, app) {
   chevron.textContent = '▸';
   chevron.style.cssText = 'font-size:10px;transition:transform 0.15s ease';
 
-  const kind = cleanText.includes('\n') || cleanText.length > 80 ? 'TEXT' : 'TEXT';
   const sourceTag = String(source || 'selection').toUpperCase();
   chip.appendChild(chevron);
-  chip.appendChild(document.createTextNode(`${sourceTag} - ${kind}`));
+  chip.appendChild(document.createTextNode(`${sourceTag} - TEXT`));
 
   const meta = document.createElement('div');
   meta.style.cssText = 'font-size:0.68rem;color:#7dd3fc;opacity:0.9';
@@ -2321,6 +2379,9 @@ function appendSelectionCapture(text, source, app) {
   content.style.cssText = 'display:none;padding:10px 12px;border-radius:12px;border:1px solid rgba(59,130,246,0.14);background:rgba(255,255,255,0.03);color:#dbeafe;font-size:0.8rem;line-height:1.55;white-space:pre-wrap;word-break:break-word';
   content.textContent = cleanText;
 
+  const suggestionContainer = document.createElement('div');
+  suggestionContainer.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px';
+
   chip.addEventListener('click', () => {
     const expanded = chip.getAttribute('aria-expanded') === 'true';
     chip.setAttribute('aria-expanded', expanded ? 'false' : 'true');
@@ -2329,10 +2390,12 @@ function appendSelectionCapture(text, source, app) {
   });
 
   container.appendChild(chip);
+  container.appendChild(suggestionContainer);
   container.appendChild(content);
   row.appendChild(container);
   c.appendChild(row);
   c.scrollTop = c.scrollHeight;
+  void maybeLoadSelectionSuggestions(cleanText, suggestionContainer);
 }
 
 function formatThinkingDuration(durationMs) {
@@ -3213,6 +3276,7 @@ loadAllSettings().then(() => {
     if (settings['shortcut_' + id]) document.getElementById('shortcut-' + id).textContent = settings['shortcut_' + id];
   });
   renderChatStartup();
+  syncSelectionPresentationMode();
 });
 </script>
 </body>

@@ -26,6 +26,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.send("set-following-cursor", following);
   },
 
+  /** Toggle whether the overlay should capture mouse input */
+  setOverlayInteractive: (interactive) => {
+    ipcRenderer.send("set-overlay-interactive", interactive);
+  },
+
   /** Receive commands from the panel window (relayed via main) */
   onOverlayCommand: (callback) => {
     const handler = (_event, command, payload) => callback(command, payload);

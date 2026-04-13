@@ -13,6 +13,7 @@ interface ElectronAPI {
   onCursorPosition: (callback: (position: { x: number; y: number }) => void) => () => void;
   setWindowPosition: (x: number, y: number) => void;
   setFollowingCursor: (following: boolean) => void;
+  setOverlayInteractive?: (interactive: boolean) => void;
 
   // Overlay commands (from panel)
   onOverlayCommand: (callback: (command: string, payload: Record<string, unknown>) => void) => () => void;
